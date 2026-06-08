@@ -1,0 +1,19 @@
+{
+  "name": "otter",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "dev:motherotter": "pnpm --filter @otter/motherotter dev",
+    "dev:gameotter": "pnpm --filter @otter/gameotter dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
