@@ -14,6 +14,13 @@ const SECTIONS: SettingsSectionItem[] = [
     subtitle: 'Game ID, title, and export manifest fields',
   },
   {
+    id: 'media-library',
+    title: 'Media library',
+    category: 'Assets',
+    updatedAt: new Date().toISOString(),
+    subtitle: 'Per-file size limit and project storage warning threshold',
+  },
+  {
     id: 'editor-preferences',
     title: 'Editor preferences',
     category: 'General',

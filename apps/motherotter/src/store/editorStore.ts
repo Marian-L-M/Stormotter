@@ -3,8 +3,12 @@ import { immer } from 'zustand/middleware/immer'
 import { cellKey, type WorldModel } from '@otter/game-state'
 import { packOtterfile, type OtterfileDocument } from '@otter/otterfile-core'
 import type { CharacterCategory } from '../admin/characterTypes'
+import {
+  DEFAULT_MEDIA_MAX_FILE_BYTES,
+  DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
+} from '../admin/mediaTypes'
 import { DEFAULT_CHARACTER_CATEGORY } from '../admin/characterTypes'
-import type { EditorMode } from '../editorModes'
+import { isCharacterSectionMode, normalizeEditorMode, type EditorMode } from '../editorModes'
 import type { EditorScreen } from '../admin/types'
 import { DEFAULT_EDITOR_TOOL, type EditorTool } from '../editorTools'
 import type { ProjectSummary } from '../lib/projectRecord'
@@ -46,6 +50,9 @@ export interface EditorState {
   mapId: string
   activeLayer: string
   selectedTool: EditorTool
+  mapBackdropMediaId: string | null
+  mediaMaxFileBytes: number
+  mediaProjectSoftBudgetBytes: number
   world: WorldModel
   exportError: string | null
   importError: string | null
@@ -63,6 +70,9 @@ export interface EditorState {
   setTitle: (title: string) => void
   setActiveLayer: (layer: string) => void
   setSelectedTool: (tool: EditorTool) => void
+  setMapBackdropMediaId: (mediaId: string | null) => void
+  setMediaMaxFileBytes: (bytes: number) => void
+  setMediaProjectSoftBudgetBytes: (bytes: number) => void
   applyCellClick: (x: number, y: number, layer: string) => void
   buildDocument: () => OtterfileDocument
   exportOtterfile: () => Promise<Uint8Array>
@@ -83,6 +93,9 @@ function getSnapshot(state: EditorState): EditorSnapshot {
     activeLayer: state.activeLayer,
     selectedTool: state.selectedTool,
     activeMode: state.activeMode,
+    mapBackdropMediaId: state.mapBackdropMediaId,
+    mediaMaxFileBytes: state.mediaMaxFileBytes,
+    mediaProjectSoftBudgetBytes: state.mediaProjectSoftBudgetBytes,
     world: state.world,
   }
 }
@@ -104,7 +117,10 @@ function applySnapshot(
     state.mapId = snapshot.mapId
     state.activeLayer = snapshot.activeLayer
     state.selectedTool = snapshot.selectedTool
-    state.activeMode = snapshot.activeMode
+    state.activeMode = normalizeEditorMode(snapshot.activeMode)
+    state.mapBackdropMediaId = snapshot.mapBackdropMediaId
+    state.mediaMaxFileBytes = snapshot.mediaMaxFileBytes
+    state.mediaProjectSoftBudgetBytes = snapshot.mediaProjectSoftBudgetBytes
     assignWorld(state, snapshot.world)
   })
   if (content !== undefined) {
@@ -132,6 +148,9 @@ export const useEditorStore = create<EditorState>()(
     gameId: '',
     title: '',
     mapId: 'main',
+    mapBackdropMediaId: null,
+    mediaMaxFileBytes: DEFAULT_MEDIA_MAX_FILE_BYTES,
+    mediaProjectSoftBudgetBytes: DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
     activeLayer: 'ground',
     selectedTool: DEFAULT_EDITOR_TOOL,
     world: createDefaultWorld(),
@@ -287,7 +306,7 @@ export const useEditorStore = create<EditorState>()(
         state.activeMode = mode
         state.editorScreen = 'list'
         state.selectedEntityId = null
-        if (mode !== 'characters') {
+        if (!isCharacterSectionMode(mode)) {
           state.characterTypeTab = DEFAULT_CHARACTER_CATEGORY
         }
       })
@@ -328,6 +347,24 @@ export const useEditorStore = create<EditorState>()(
     setActiveLayer: (layer) => {
       set((state) => {
         state.activeLayer = layer
+      })
+    },
+
+    setMapBackdropMediaId: (mediaId) => {
+      set((state) => {
+        state.mapBackdropMediaId = mediaId
+      })
+    },
+
+    setMediaMaxFileBytes: (bytes) => {
+      set((state) => {
+        state.mediaMaxFileBytes = bytes
+      })
+    },
+
+    setMediaProjectSoftBudgetBytes: (bytes) => {
+      set((state) => {
+        state.mediaProjectSoftBudgetBytes = bytes
       })
     },
 

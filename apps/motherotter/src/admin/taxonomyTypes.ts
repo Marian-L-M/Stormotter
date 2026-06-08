@@ -1,7 +1,10 @@
 export type TaxonomyDomain =
   | 'stories'
   | 'characters'
-  | 'races'
+  | 'character-types'
+  | 'character-classes'
+  | 'media'
+  | 'audio-profiles'
   | 'items'
   | 'containers'
   | 'abilities'
@@ -31,7 +34,10 @@ export interface TaxonomyState {
 export const TAXONOMY_DOMAINS: TaxonomyDomain[] = [
   'stories',
   'characters',
-  'races',
+  'character-types',
+  'character-classes',
+  'media',
+  'audio-profiles',
   'items',
   'containers',
   'abilities',
@@ -66,27 +72,55 @@ export const EMPTY_TAXONOMY_ASSIGNMENT: EntityTaxonomyAssignment = {
   tagIds: [],
 }
 
+function mergeDomainTaxonomy(a: DomainTaxonomy, b: DomainTaxonomy | undefined): DomainTaxonomy {
+  if (!b) return structuredClone(a)
+  return {
+    categories: [...structuredClone(a.categories), ...structuredClone(b.categories)],
+    tags: [...structuredClone(a.tags), ...structuredClone(b.tags)],
+  }
+}
+
+function migrateLegacyEntityId(id: string): string {
+  if (id.startsWith('lineage-') || id.startsWith('cclass-')) return id
+  if (id.startsWith('race-')) return `lineage-${id.slice(5)}`
+  if (id.startsWith('class-')) return `lineage-${id.slice(6)}`
+  return id
+}
+
 export function normalizeTaxonomyState(raw: TaxonomyState | undefined): TaxonomyState {
   const empty = createEmptyTaxonomyState()
   if (!raw) return empty
 
+  const rawDomains = raw.domains as Record<string, DomainTaxonomy | undefined>
   const domains = { ...empty.domains }
   for (const domain of TAXONOMY_DOMAINS) {
-    const fromRaw = raw.domains?.[domain]
+    const fromRaw = rawDomains[domain]
     domains[domain] = {
       categories: structuredClone(fromRaw?.categories ?? []),
       tags: structuredClone(fromRaw?.tags ?? []),
     }
   }
 
-  return {
-    domains,
-    assignments: structuredClone(raw.assignments ?? {}),
+  if (rawDomains.races) {
+    domains['character-types'] = mergeDomainTaxonomy(domains['character-types'], rawDomains.races)
   }
+  if (rawDomains.classes) {
+    domains['character-types'] = mergeDomainTaxonomy(domains['character-types'], rawDomains.classes)
+  }
+
+  const assignments: Record<string, EntityTaxonomyAssignment> = {}
+  for (const [entityId, assignment] of Object.entries(raw.assignments ?? {})) {
+    const migratedId = migrateLegacyEntityId(entityId)
+    assignments[migratedId] = structuredClone(assignment)
+  }
+
+  return { domains, assignments }
 }
 
 export function editorModeToTaxonomyDomain(mode: string): TaxonomyDomain | null {
   if (mode === 'state') return 'state'
+  if (mode === 'races' || mode === 'classes') return 'character-types'
+  if (mode === 'character-types' || mode === 'character-classes' || mode === 'media' || mode === 'audio-profiles') return mode
   if (TAXONOMY_DOMAINS.includes(mode as TaxonomyDomain)) {
     return mode as TaxonomyDomain
   }

@@ -7,7 +7,13 @@ import {
   type WorldModel,
 } from '@otter/game-state'
 import { FORMAT_VERSION, type OtterfileDocument } from '@otter/otterfile-core'
-import type { EditorMode } from '../editorModes'
+import {
+  DEFAULT_MEDIA_MAX_FILE_BYTES,
+  DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
+  normalizeMediaMaxFileBytes,
+  normalizeMediaProjectSoftBudgetBytes,
+} from '../admin/mediaTypes'
+import { normalizeEditorMode, type EditorMode } from '../editorModes'
 import type { EditorTool } from '../editorTools'
 import {
   deleteProject as deleteStoredProject,
@@ -26,6 +32,7 @@ import {
   type StoredProject,
   toProjectSummary,
 } from './projectRecord'
+import { deleteMediaBlobsForProject } from './mediaBlobRepository'
 import { createDefaultProjectContent, normalizeProjectContent } from './projectContent'
 
 const DEFAULT_LAYERS = ['ground', 'roof'] as const
@@ -59,6 +66,9 @@ export interface EditorSnapshot {
   activeLayer: string
   selectedTool: EditorTool
   activeMode: EditorMode
+  mapBackdropMediaId: string | null
+  mediaMaxFileBytes: number
+  mediaProjectSoftBudgetBytes: number
   world: WorldModel
 }
 
@@ -86,6 +96,9 @@ export function snapshotToStoredProject(
     activeLayer: snapshot.activeLayer,
     selectedTool: snapshot.selectedTool,
     activeMode: snapshot.activeMode,
+    mapBackdropMediaId: snapshot.mapBackdropMediaId,
+    mediaMaxFileBytes: snapshot.mediaMaxFileBytes,
+    mediaProjectSoftBudgetBytes: snapshot.mediaProjectSoftBudgetBytes,
     world: serializeWorld(snapshot.world),
     content: normalizeProjectContent(content),
     formatVersion: FORMAT_VERSION,
@@ -102,7 +115,12 @@ export function storedProjectToSnapshot(project: StoredProject): EditorSnapshot 
     mapId: project.mapId,
     activeLayer: project.activeLayer,
     selectedTool: project.selectedTool,
-    activeMode: project.activeMode,
+    activeMode: normalizeEditorMode(project.activeMode),
+    mapBackdropMediaId: project.mapBackdropMediaId ?? null,
+    mediaMaxFileBytes: normalizeMediaMaxFileBytes(project.mediaMaxFileBytes),
+    mediaProjectSoftBudgetBytes: normalizeMediaProjectSoftBudgetBytes(
+      project.mediaProjectSoftBudgetBytes,
+    ),
     world: deserializeWorld(project.world),
   }
 }
@@ -121,6 +139,9 @@ export function createDefaultSnapshot(projectId = createProjectId()): EditorSnap
     activeLayer: DEFAULT_LAYERS[0],
     selectedTool: 'character:hero',
     activeMode: 'maps',
+    mapBackdropMediaId: null,
+    mediaMaxFileBytes: DEFAULT_MEDIA_MAX_FILE_BYTES,
+    mediaProjectSoftBudgetBytes: DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
     world: createDefaultWorld(),
   }
 }
@@ -234,6 +255,7 @@ export async function createStoredProject(
 }
 
 export async function removeStoredProject(projectId: string): Promise<void> {
+  await deleteMediaBlobsForProject(projectId)
   await deleteStoredProject(projectId)
 }
 
@@ -248,6 +270,9 @@ export async function contentFromBytes(bytes: Uint8Array): Promise<EditorContent
     activeLayer: world.layers[0] ?? 'ground',
     selectedTool: 'character:hero',
     activeMode: 'maps',
+    mapBackdropMediaId: null,
+    mediaMaxFileBytes: DEFAULT_MEDIA_MAX_FILE_BYTES,
+    mediaProjectSoftBudgetBytes: DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
     world: cloneWorld(world),
   }
 }

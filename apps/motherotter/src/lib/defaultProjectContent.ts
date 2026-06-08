@@ -1,6 +1,8 @@
 import { DEFAULT_CHARACTER_CATEGORY } from '../admin/characterTypes'
+import type { CharacterClass } from '../admin/characterClassTypes'
+import type { CharacterLineageType } from '../admin/lineageTypes'
+import { createDefaultStatRanges, createEmptyCharacterStats } from '../admin/lineageTypes'
 import { createEmptyTaxonomyState } from '../admin/taxonomyTypes'
-import type { Race } from '../admin/raceTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { AdminListItem } from '../admin/types'
 import type { ProjectContent, SerializedCatalogStubs, SerializedCharacter } from './projectRecord'
@@ -9,8 +11,12 @@ function createStateId(): string {
   return `state-${crypto.randomUUID().slice(0, 8)}`
 }
 
-function createRaceId(): string {
-  return `race-${crypto.randomUUID().slice(0, 8)}`
+function createLineageId(): string {
+  return `lineage-${crypto.randomUUID().slice(0, 8)}`
+}
+
+function createCharacterClassId(): string {
+  return `cclass-${crypto.randomUUID().slice(0, 8)}`
 }
 
 function createCharacterId(): string {
@@ -60,22 +66,50 @@ function defaultStateVariables(): StateVariable[] {
   ]
 }
 
-function defaultRaces(): Race[] {
+function defaultCharacterTypes(): CharacterLineageType[] {
   const timestamp = new Date().toISOString()
   return [
     {
-      id: createRaceId(),
+      id: createLineageId(),
       name: 'Human',
-      description: 'Versatile and widespread; no strong innate gifts or penalties.',
-      distinctFeatures: ['Adaptable to any climate', 'No racial ability modifiers'],
+      description: 'Versatile and widespread; balanced stat potential across all attributes.',
+      statRanges: createDefaultStatRanges(),
       abilityIds: [],
       updatedAt: timestamp,
     },
     {
-      id: createRaceId(),
+      id: createLineageId(),
       name: 'Elf',
       description: 'Long-lived forest dwellers with keen senses and arcane affinity.',
-      distinctFeatures: ['Keen hearing and low-light vision', 'Natural affinity for magic'],
+      statRanges: {
+        ...createDefaultStatRanges(),
+        strength: { min: 3, max: 16 },
+        dexterity: { min: 5, max: 20 },
+        constitution: { min: 3, max: 16 },
+        intelligence: { min: 5, max: 20 },
+      },
+      abilityIds: [],
+      updatedAt: timestamp,
+    },
+  ]
+}
+
+function defaultCharacterClasses(): CharacterClass[] {
+  const timestamp = new Date().toISOString()
+  return [
+    {
+      id: createCharacterClassId(),
+      name: 'Warrior',
+      description: 'Front-line fighters trained for melee combat and endurance.',
+      distinctFeatures: ['Heavy armor proficiency', 'Bonus damage with two-handed weapons'],
+      abilityIds: [],
+      updatedAt: timestamp,
+    },
+    {
+      id: createCharacterClassId(),
+      name: 'Mage',
+      description: 'Arcane casters who channel elemental and utility spells.',
+      distinctFeatures: ['Spell focus bonus', 'Reduced mana cost for cantrips'],
       abilityIds: [],
       updatedAt: timestamp,
     },
@@ -90,7 +124,11 @@ function defaultCharacters(): SerializedCharacter[] {
       title: 'New Character 1',
       characterType: DEFAULT_CHARACTER_CATEGORY,
       updatedAt: timestamp,
-      raceId: null,
+      lineageTypeId: null,
+      classId: null,
+      portraitMediaId: null,
+      audioProfileId: null,
+      stats: createEmptyCharacterStats(),
       summary: '',
     },
   ]
@@ -118,7 +156,10 @@ function defaultCatalogStubs(): SerializedCatalogStubs {
 export function createDefaultProjectContent(): ProjectContent {
   return {
     stateVariables: defaultStateVariables(),
-    races: defaultRaces(),
+    characterTypes: defaultCharacterTypes(),
+    characterClasses: defaultCharacterClasses(),
+    mediaAssets: [],
+    audioProfiles: [],
     characters: defaultCharacters(),
     catalogStubs: defaultCatalogStubs(),
     taxonomy: createEmptyTaxonomyState(),

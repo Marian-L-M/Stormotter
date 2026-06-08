@@ -2,25 +2,27 @@ import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { StringListEditor } from '../../components/admin/StringListEditor'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
-import { useRacesStore } from '../../store/racesStore'
+import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
 
-export function RaceEditorView() {
+export function CharacterClassEditorView() {
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId)
   const closeEntityEditor = useEditorStore((state) => state.closeEntityEditor)
-  const race = useRacesStore((state) =>
-    selectedEntityId ? state.races.find((entry) => entry.id === selectedEntityId) : undefined,
+  const characterClass = useCharacterClassesStore((state) =>
+    selectedEntityId
+      ? state.characterClasses.find((entry) => entry.id === selectedEntityId)
+      : undefined,
   )
-  const updateRace = useRacesStore((state) => state.updateRace)
-  const removeRace = useRacesStore((state) => state.removeRace)
+  const updateCharacterClass = useCharacterClassesStore((state) => state.updateCharacterClass)
+  const removeCharacterClass = useCharacterClassesStore((state) => state.removeCharacterClass)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
   const abilities = useContentCatalogStore((state) => state.stubs.abilities)
 
-  if (!selectedEntityId || !race) {
+  if (!selectedEntityId || !characterClass) {
     return (
       <section className="editor-view">
-        <p className="admin-empty">Race not found.</p>
+        <p className="admin-empty">Character class not found.</p>
         <button type="button" onClick={closeEntityEditor}>
           Back to list
         </button>
@@ -29,30 +31,36 @@ export function RaceEditorView() {
   }
 
   function toggleAbility(abilityId: string) {
-    const next = race!.abilityIds.includes(abilityId)
-      ? race!.abilityIds.filter((id) => id !== abilityId)
-      : [...race!.abilityIds, abilityId]
-    updateRace(race!.id, { abilityIds: next })
+    const next = characterClass!.abilityIds.includes(abilityId)
+      ? characterClass!.abilityIds.filter((id) => id !== abilityId)
+      : [...characterClass!.abilityIds, abilityId]
+    updateCharacterClass(characterClass!.id, { abilityIds: next })
   }
 
   function handleRemove() {
-    if (!race) return
-    removeRace(race.id)
-    removeTaxonomyEntity(race.id)
+    if (!characterClass) return
+    removeCharacterClass(characterClass.id)
+    removeTaxonomyEntity(characterClass.id)
     closeEntityEditor()
   }
 
   return (
-    <AdminEditorShell listLabel="Races" itemTitle={race.name} onBack={closeEntityEditor}>
+    <AdminEditorShell
+      listLabel="Character Classes"
+      itemTitle={characterClass.name}
+      onBack={closeEntityEditor}
+    >
       <p className="admin-editor-lead">
-        Races define innate traits and starting abilities shared by characters of that lineage.
+        Character classes define jobs, roles, and combat styles such as warrior, mage, or rogue.
       </p>
 
       <label className="field">
         <span>Name</span>
         <input
-          value={race.name}
-          onChange={(event) => updateRace(race.id, { name: event.target.value })}
+          value={characterClass.name}
+          onChange={(event) =>
+            updateCharacterClass(characterClass.id, { name: event.target.value })
+          }
         />
       </label>
 
@@ -61,22 +69,26 @@ export function RaceEditorView() {
         <textarea
           className="admin-textarea"
           rows={3}
-          value={race.description}
-          placeholder="Lore, physiology, and cultural notes for this race…"
-          onChange={(event) => updateRace(race.id, { description: event.target.value })}
+          value={characterClass.description}
+          placeholder="Training, equipment, and role notes for this class…"
+          onChange={(event) =>
+            updateCharacterClass(characterClass.id, { description: event.target.value })
+          }
         />
       </label>
 
       <StringListEditor
         label="Distinct features"
-        items={race.distinctFeatures ?? []}
-        onChange={(distinctFeatures) => updateRace(race.id, { distinctFeatures })}
-        placeholder="e.g. Darkvision, cold resistance, +1 to persuasion…"
+        items={characterClass.distinctFeatures ?? []}
+        onChange={(distinctFeatures) =>
+          updateCharacterClass(characterClass.id, { distinctFeatures })
+        }
+        placeholder="e.g. Heavy armor proficiency, spell focus bonus…"
         addLabel="Add feature"
       />
 
       <fieldset className="admin-fieldset">
-        <legend>Racial abilities</legend>
+        <legend>Class abilities</legend>
         {abilities.length === 0 ? (
           <p className="admin-empty admin-empty-inline">
             No abilities defined yet. Create abilities in the Abilities tab, then link them here.
@@ -88,7 +100,7 @@ export function RaceEditorView() {
                 <label className="admin-checkbox-label">
                   <input
                     type="checkbox"
-                    checked={race.abilityIds.includes(ability.id)}
+                    checked={characterClass.abilityIds.includes(ability.id)}
                     onChange={() => toggleAbility(ability.id)}
                   />
                   <span>
@@ -104,11 +116,11 @@ export function RaceEditorView() {
         )}
       </fieldset>
 
-      <TaxonomyEditorFields domain="races" entityId={race.id} />
+      <TaxonomyEditorFields domain="character-classes" entityId={characterClass.id} />
 
       <div className="admin-editor-actions">
         <button type="button" className="admin-danger-button" onClick={handleRemove}>
-          Delete race
+          Delete character class
         </button>
       </div>
     </AdminEditorShell>

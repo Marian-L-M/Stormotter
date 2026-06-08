@@ -1,5 +1,9 @@
+import type { AudioProfile } from '../admin/audioProfileTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
-import type { Race } from '../admin/raceTypes'
+import type { MediaAsset } from '../admin/mediaTypes'
+import type { CharacterClass } from '../admin/characterClassTypes'
+import type { CharacterLineageType } from '../admin/lineageTypes'
+import type { CharacterStatValues } from '../admin/lineageTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { TaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem } from '../admin/types'
@@ -11,7 +15,11 @@ export interface SerializedCharacter {
   title: string
   characterType: CharacterCategory
   updatedAt: string
-  raceId: string | null
+  lineageTypeId: string | null
+  classId: string | null
+  portraitMediaId: string | null
+  audioProfileId: string | null
+  stats: CharacterStatValues
   summary: string
 }
 
@@ -25,7 +33,10 @@ export interface SerializedCatalogStubs {
 
 export interface ProjectContent {
   stateVariables: StateVariable[]
-  races: Race[]
+  characterTypes: CharacterLineageType[]
+  characterClasses: CharacterClass[]
+  mediaAssets: MediaAsset[]
+  audioProfiles: AudioProfile[]
   characters: SerializedCharacter[]
   catalogStubs: SerializedCatalogStubs
   taxonomy: TaxonomyState
@@ -53,6 +64,9 @@ export interface StoredProject {
   activeLayer: string
   selectedTool: EditorTool
   activeMode: EditorMode
+  mapBackdropMediaId: string | null
+  mediaMaxFileBytes: number
+  mediaProjectSoftBudgetBytes: number
   world: SerializedWorld
   content?: ProjectContent
   formatVersion: string

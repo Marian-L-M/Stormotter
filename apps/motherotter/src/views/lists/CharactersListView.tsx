@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { CharacterCategory } from '../../admin/characterTypes'
+import { formatStatRangesSummary } from '../../admin/lineageTypes'
 import { useAdminList } from '../../admin/useAdminList'
 import { filterCharactersByType } from '../../lib/projectContent'
 import { AdminDataTable } from '../../components/admin/AdminDataTable'
@@ -10,7 +11,8 @@ import type { AdminColumn, AdminListItem } from '../../admin/types'
 import { formatTimestamp } from '../../lib/format'
 import { useCharacterMetaStore } from '../../store/characterMetaStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
-import { useRacesStore } from '../../store/racesStore'
+import { useCharacterClassesStore } from '../../store/characterClassesStore'
+import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
 
@@ -24,7 +26,8 @@ export function CharactersListView({ characterType }: CharactersListViewProps) {
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
   const metaByCharacterId = useCharacterMetaStore((state) => state.metaByCharacterId)
   const updateMeta = useCharacterMetaStore((state) => state.updateMeta)
-  const races = useRacesStore((state) => state.races)
+  const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
+  const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
 
   const items = useMemo(
     () => filterCharactersByType(allItems, metaByCharacterId, characterType),
@@ -46,12 +49,32 @@ export function CharactersListView({ characterType }: CharactersListViewProps) {
       render: (item) => getTaxonomySummaryForEntity('characters', item.id).tags,
     },
     {
-      id: 'race',
-      header: 'Race',
+      id: 'lineage-type',
+      header: 'Type',
       render: (item) => {
-        const raceId = metaByCharacterId[item.id]?.raceId
-        if (!raceId) return '—'
-        return races.find((race) => race.id === raceId)?.name ?? raceId
+        const lineageTypeId = metaByCharacterId[item.id]?.lineageTypeId
+        if (!lineageTypeId) return '—'
+        return lineageTypes.find((entry) => entry.id === lineageTypeId)?.name ?? lineageTypeId
+      },
+    },
+    {
+      id: 'lineage-ranges',
+      header: 'Type ranges',
+      render: (item) => {
+        const lineageTypeId = metaByCharacterId[item.id]?.lineageTypeId
+        if (!lineageTypeId) return '—'
+        const lineageType = lineageTypes.find((entry) => entry.id === lineageTypeId)
+        if (!lineageType) return '—'
+        return formatStatRangesSummary(lineageType.statRanges)
+      },
+    },
+    {
+      id: 'class',
+      header: 'Class',
+      render: (item) => {
+        const classId = metaByCharacterId[item.id]?.classId
+        if (!classId) return '—'
+        return characterClasses.find((entry) => entry.id === classId)?.name ?? classId
       },
     },
     {

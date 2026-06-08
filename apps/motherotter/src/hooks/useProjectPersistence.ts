@@ -4,7 +4,10 @@ import { hasProjectContentChanges } from '../lib/projectChanges'
 import { useCharacterMetaStore } from '../store/characterMetaStore'
 import { useContentCatalogStore } from '../store/contentCatalogStore'
 import { useEditorStore } from '../store/editorStore'
-import { useRacesStore } from '../store/racesStore'
+import { useMediaLibraryStore } from '../store/mediaLibraryStore'
+import { useAudioProfilesStore } from '../store/audioProfilesStore'
+import { useCharacterClassesStore } from '../store/characterClassesStore'
+import { useLineageTypesStore } from '../store/lineageTypesStore'
 import { useStateVariablesStore } from '../store/stateVariablesStore'
 import { useTaxonomyStore } from '../store/taxonomyStore'
 
@@ -16,6 +19,9 @@ function buildPersistState() {
     gameId: editor.gameId,
     title: editor.title,
     mapId: editor.mapId,
+    mapBackdropMediaId: editor.mapBackdropMediaId,
+    mediaMaxFileBytes: editor.mediaMaxFileBytes,
+    mediaProjectSoftBudgetBytes: editor.mediaProjectSoftBudgetBytes,
     world: editor.world,
     content: getProjectContent(),
   }
@@ -89,7 +95,17 @@ export function useProjectPersistence() {
       }
     })
 
-    const unsubscribeRaces = useRacesStore.subscribe(() => {
+    const unsubscribeLineageTypes = useLineageTypesStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
+    const unsubscribeCharacterClasses = useCharacterClassesStore.subscribe(() => {
       const state = useEditorStore.getState()
       if (state.hydrating) return
       const current = buildPersistState()
@@ -119,11 +135,34 @@ export function useProjectPersistence() {
       }
     })
 
+    const unsubscribeMedia = useMediaLibraryStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
+    const unsubscribeAudioProfiles = useAudioProfilesStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
     return () => {
       unsubscribeEditor()
       unsubscribeCatalog()
       unsubscribeState()
-      unsubscribeRaces()
+      unsubscribeLineageTypes()
+      unsubscribeCharacterClasses()
+      unsubscribeMedia()
+      unsubscribeAudioProfiles()
       unsubscribeMeta()
       unsubscribeTaxonomy()
       if (timerRef.current) clearTimeout(timerRef.current)

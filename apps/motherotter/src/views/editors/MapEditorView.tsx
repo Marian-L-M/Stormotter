@@ -1,5 +1,6 @@
 import { MapCanvas } from '../../components/MapCanvas'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { MediaPickerField } from '../../components/media/MediaPickerField'
 import { PLACEMENT_TOOLS, useEditorStore } from '../../store/editorStore'
 
 export function MapEditorView() {
@@ -8,6 +9,9 @@ export function MapEditorView() {
   const world = useEditorStore((state) => state.world)
   const activeLayer = useEditorStore((state) => state.activeLayer)
   const selectedTool = useEditorStore((state) => state.selectedTool)
+  const mapBackdropMediaId = useEditorStore((state) => state.mapBackdropMediaId)
+  const setMapBackdropMediaId = useEditorStore((state) => state.setMapBackdropMediaId)
+  const markDirty = useEditorStore((state) => state.markDirty)
   const closeEntityEditor = useEditorStore((state) => state.closeEntityEditor)
   const setActiveLayer = useEditorStore((state) => state.setActiveLayer)
   const setSelectedTool = useEditorStore((state) => state.setSelectedTool)
@@ -21,6 +25,18 @@ export function MapEditorView() {
       <p className="admin-editor-lead">
         Place content on the grid for the active layer. Cells are stored sparsely.
       </p>
+
+      <MediaPickerField
+        label="Map backdrop"
+        value={mapBackdropMediaId}
+        onChange={(mediaId) => {
+          setMapBackdropMediaId(mediaId)
+          markDirty()
+        }}
+        filter="image"
+        hint="Optional background image shown behind the map canvas."
+        modalTitle="Select map backdrop"
+      />
 
       <div className="admin-editor-section">
         <div className="panel-header">

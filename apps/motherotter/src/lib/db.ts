@@ -1,15 +1,31 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { AppSettings, StoredProject } from './projectRecord'
 
+export interface StoredMediaBlob {
+  id: string
+  projectId: string
+  mimeType: string
+  size: number
+  data: Blob
+  createdAt: string
+  updatedAt: string
+}
+
 export class MotherotterDb extends Dexie {
   projects!: EntityTable<StoredProject, 'projectId'>
   settings!: EntityTable<AppSettings, 'id'>
+  mediaBlobs!: EntityTable<StoredMediaBlob, 'id'>
 
   constructor() {
     super('motherotter')
     this.version(1).stores({
       projects: 'projectId, gameId, updatedAt',
       settings: 'id',
+    })
+    this.version(2).stores({
+      projects: 'projectId, gameId, updatedAt',
+      settings: 'id',
+      mediaBlobs: 'id, projectId, updatedAt',
     })
   }
 }

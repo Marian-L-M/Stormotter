@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { toWorldView } from '@otter/renderer-api'
 import { createDemoRenderer } from '@otter/renderer-demo'
 import type { Renderer } from '@otter/renderer-api'
+import { useMediaAssetObjectUrl } from '../hooks/useMediaObjectUrl'
 import { useEditorStore } from '../store/editorStore'
 
 export function MapCanvas() {
@@ -9,7 +10,9 @@ export function MapCanvas() {
   const rendererRef = useRef<Renderer | null>(null)
   const world = useEditorStore((state) => state.world)
   const activeLayer = useEditorStore((state) => state.activeLayer)
+  const mapBackdropMediaId = useEditorStore((state) => state.mapBackdropMediaId)
   const applyCellClick = useEditorStore((state) => state.applyCellClick)
+  const backdropUrl = useMediaAssetObjectUrl(mapBackdropMediaId)
 
   useEffect(() => {
     const host = hostRef.current
@@ -37,5 +40,12 @@ export function MapCanvas() {
     rendererRef.current.render(toWorldView(world, activeLayer))
   }, [world, activeLayer])
 
-  return <div ref={hostRef} className="renderer-host" />
+  return (
+    <div className="map-canvas-shell">
+      {backdropUrl ? (
+        <img src={backdropUrl} alt="" className="map-canvas-backdrop" aria-hidden="true" />
+      ) : null}
+      <div ref={hostRef} className="renderer-host" />
+    </div>
+  )
 }

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import type { RaceListItem } from '../../admin/raceTypes'
+import type { LineageTypeListItem } from '../../admin/lineageTypes'
+import { formatStatRangesSummary } from '../../admin/lineageTypes'
 import { useAdminList } from '../../admin/useAdminList'
 import type { AdminColumn } from '../../admin/types'
 import { AdminDataTable } from '../../components/admin/AdminDataTable'
@@ -8,54 +9,54 @@ import { AdminListShell } from '../../components/admin/AdminListShell'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
-import { useRacesStore } from '../../store/racesStore'
+import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
 
-export function RacesListView() {
-  const races = useRacesStore((state) => state.races)
-  const addRace = useRacesStore((state) => state.addRace)
+export function LineageTypesListView() {
+  const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
+  const addLineageType = useLineageTypesStore((state) => state.addLineageType)
   const abilities = useContentCatalogStore((state) => state.stubs.abilities)
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
 
-  const listItems = useMemo<RaceListItem[]>(
+  const listItems = useMemo<LineageTypeListItem[]>(
     () =>
-      races.map((race) => ({
-        id: race.id,
-        title: race.name,
-        category: `${race.distinctFeatures.length} feature${race.distinctFeatures.length === 1 ? '' : 's'}`,
-        updatedAt: race.updatedAt,
-        subtitle: race.description || undefined,
-        race,
+      lineageTypes.map((lineageType) => ({
+        id: lineageType.id,
+        title: lineageType.name,
+        category: formatStatRangesSummary(lineageType.statRanges),
+        updatedAt: lineageType.updatedAt,
+        subtitle: lineageType.description || undefined,
+        lineageType,
       })),
-    [races],
+    [lineageTypes],
   )
 
   const list = useAdminList({ items: listItems })
 
-  const columns: AdminColumn<RaceListItem>[] = [
-    { id: 'title', header: 'Race', render: (item) => item.title },
+  const columns: AdminColumn<LineageTypeListItem>[] = [
+    { id: 'title', header: 'Type', render: (item) => item.title },
     {
-      id: 'features',
-      header: 'Features',
+      id: 'stat-ranges',
+      header: 'Stat ranges',
       render: (item) => item.category,
     },
     {
       id: 'categories',
       header: 'Categories',
-      render: (item) => getTaxonomySummaryForEntity('races', item.id).categories,
+      render: (item) => getTaxonomySummaryForEntity('character-types', item.id).categories,
     },
     {
       id: 'tags',
       header: 'Tags',
-      render: (item) => getTaxonomySummaryForEntity('races', item.id).tags,
+      render: (item) => getTaxonomySummaryForEntity('character-types', item.id).tags,
     },
     {
       id: 'abilities',
       header: 'Abilities',
       render: (item) => {
-        if (item.race.abilityIds.length === 0) return '—'
-        const names = item.race.abilityIds
+        if (item.lineageType.abilityIds.length === 0) return '—'
+        const names = item.lineageType.abilityIds
           .map((id) => abilities.find((ability) => ability.id === id)?.title ?? id)
           .join(', ')
         return names
@@ -69,14 +70,14 @@ export function RacesListView() {
   ]
 
   function handleAdd() {
-    openEntityEditor(addRace())
+    openEntityEditor(addLineageType())
   }
 
   return (
     <AdminListShell
-      title="Races"
-      description="Define playable and NPC races with distinct traits, abilities, categories, and tags."
-      addLabel="Add Race"
+      title="Character Types"
+      description="Define character lineages with stat ranges, abilities, categories, and tags."
+      addLabel="Add Character Type"
       onAdd={handleAdd}
       filters={
         <AdminFilterBar
@@ -96,7 +97,7 @@ export function RacesListView() {
         columns={columns}
         items={list.pageItems}
         onRowClick={(item) => openEntityEditor(item.id)}
-        emptyMessage='No races yet. Click "Add Race" to define one.'
+        emptyMessage='No character types yet. Click "Add Character Type" to define one.'
       />
     </AdminListShell>
   )

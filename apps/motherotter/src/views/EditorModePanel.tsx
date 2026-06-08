@@ -9,7 +9,10 @@ import { CharactersTabView } from './CharactersTabView'
 import { ContentTabListView } from './lists/ContentTabListView'
 import { FilesView } from './FilesView'
 import { MapsListView } from './lists/MapsListView'
-import { RacesTabView } from './RacesTabView'
+import { MediaLibraryTabView } from './MediaLibraryTabView'
+import { AudioProfilesTabView } from './AudioProfilesTabView'
+import { CharacterClassesTabView } from './CharacterClassesTabView'
+import { CharacterTypesTabView } from './CharacterTypesTabView'
 import { SettingsListView } from './lists/SettingsListView'
 import { StateListView } from './lists/StateListView'
 import { useEditorStore } from '../store/editorStore'
@@ -56,7 +59,7 @@ function isStubContentType(mode: EditorMode): mode is StubContentType {
 }
 
 function isSettingsSectionId(id: string): id is SettingsSectionId {
-  return id === 'project-metadata' || id === 'editor-preferences'
+  return id === 'project-metadata' || id === 'editor-preferences' || id === 'media-library'
 }
 
 interface EditorModePanelProps {
@@ -79,6 +82,14 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
     return <SettingsListView />
   }
 
+  if (mode === 'media') {
+    return <MediaLibraryTabView />
+  }
+
+  if (mode === 'audio-profiles') {
+    return <AudioProfilesTabView />
+  }
+
   if (mode === 'maps') {
     if (editorScreen === 'edit' && selectedEntityId === mapId) {
       return <MapEditorView />
@@ -97,8 +108,12 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
     return <CharactersTabView />
   }
 
-  if (mode === 'races') {
-    return <RacesTabView />
+  if (mode === 'character-types') {
+    return <CharacterTypesTabView />
+  }
+
+  if (mode === 'character-classes') {
+    return <CharacterClassesTabView />
   }
 
   if (isStubContentType(mode)) {

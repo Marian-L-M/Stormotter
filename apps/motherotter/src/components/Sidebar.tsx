@@ -1,7 +1,15 @@
 import { FORMAT_VERSION } from '@otter/otterfile-core'
-import { EDITOR_MODES } from '../editorModes'
+import {
+  SIDEBAR_NAV,
+  type EditorMode,
+  type SidebarNavGroup,
+} from '../editorModes'
 import { formatTimestamp } from '../lib/format'
 import { useEditorStore } from '../store/editorStore'
+
+function isNavActive(activeMode: EditorMode, group: SidebarNavGroup): boolean {
+  return group.children.some((child) => child.id === activeMode)
+}
 
 export function Sidebar() {
   const title = useEditorStore((state) => state.title)
@@ -29,16 +37,27 @@ export function Sidebar() {
 
       <nav className="sidebar-nav">
         <ul>
-          {EDITOR_MODES.map((mode) => (
-            <li key={mode.id}>
-              <button
-                type="button"
-                className={activeMode === mode.id ? 'active' : undefined}
-                aria-current={activeMode === mode.id ? 'page' : undefined}
-                onClick={() => setActiveMode(mode.id)}
+          {SIDEBAR_NAV.map((group) => (
+            <li key={group.id} className="sidebar-nav-group">
+              <span
+                className={`sidebar-nav-group-label${isNavActive(activeMode, group) ? ' is-active-group' : ''}`}
               >
-                {mode.label}
-              </button>
+                {group.label}
+              </span>
+              <ul className="sidebar-nav-sublist">
+                {group.children.map((child) => (
+                  <li key={child.id}>
+                    <button
+                      type="button"
+                      className={activeMode === child.id ? 'active' : undefined}
+                      aria-current={activeMode === child.id ? 'page' : undefined}
+                      onClick={() => setActiveMode(child.id)}
+                    >
+                      {child.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>

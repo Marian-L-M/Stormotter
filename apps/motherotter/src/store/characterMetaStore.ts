@@ -5,16 +5,31 @@ import {
   normalizeCharacterCategory,
   type CharacterCategory,
 } from '../admin/characterTypes'
+import { migrateLegacyCharacterClassId } from '../admin/characterClassTypes'
+import {
+  createEmptyCharacterStats,
+  migrateLegacyLineageId,
+  normalizeCharacterStats,
+  type CharacterStatValues,
+} from '../admin/lineageTypes'
 
 export interface CharacterMeta {
   characterType: CharacterCategory
-  raceId: string | null
+  lineageTypeId: string | null
+  classId: string | null
+  portraitMediaId: string | null
+  audioProfileId: string | null
+  stats: CharacterStatValues
   summary: string
 }
 
 const DEFAULT_META: CharacterMeta = {
   characterType: DEFAULT_CHARACTER_CATEGORY,
-  raceId: null,
+  lineageTypeId: null,
+  classId: null,
+  portraitMediaId: null,
+  audioProfileId: null,
+  stats: createEmptyCharacterStats(),
   summary: '',
 }
 
@@ -26,6 +41,34 @@ interface CharacterMetaState {
   updateMeta: (characterId: string, patch: Partial<CharacterMeta>) => void
   removeMeta: (characterId: string) => void
   replaceAll: (metaByCharacterId: Record<string, CharacterMeta>) => void
+}
+
+function normalizeMeta(
+  raw: Partial<CharacterMeta> & { raceId?: string | null; classId?: string | null; audioMediaId?: string | null },
+): CharacterMeta {
+  const hasNewShape = raw.lineageTypeId !== undefined
+  if (!hasNewShape) {
+    const oldLink = raw.classId ?? raw.raceId ?? null
+    return {
+      characterType: normalizeCharacterCategory(raw.characterType ?? DEFAULT_CHARACTER_CATEGORY),
+      lineageTypeId: oldLink ? migrateLegacyLineageId(oldLink) : null,
+      classId: null,
+      portraitMediaId: raw.portraitMediaId ?? null,
+      audioProfileId: raw.audioProfileId ?? null,
+      stats: normalizeCharacterStats(raw.stats),
+      summary: raw.summary ?? '',
+    }
+  }
+
+  return {
+    characterType: normalizeCharacterCategory(raw.characterType ?? DEFAULT_CHARACTER_CATEGORY),
+    lineageTypeId: raw.lineageTypeId ? migrateLegacyLineageId(raw.lineageTypeId) : null,
+    classId: raw.classId ? migrateLegacyCharacterClassId(raw.classId) : null,
+    portraitMediaId: raw.portraitMediaId ?? null,
+    audioProfileId: raw.audioProfileId ?? null,
+    stats: normalizeCharacterStats(raw.stats),
+    summary: raw.summary ?? '',
+  }
 }
 
 export const useCharacterMetaStore = create<CharacterMetaState>()(
@@ -42,7 +85,14 @@ export const useCharacterMetaStore = create<CharacterMetaState>()(
             patch.characterType !== undefined
               ? patch.characterType
               : current.characterType,
-          raceId: patch.raceId !== undefined ? patch.raceId : current.raceId,
+          lineageTypeId:
+            patch.lineageTypeId !== undefined ? patch.lineageTypeId : current.lineageTypeId,
+          classId: patch.classId !== undefined ? patch.classId : current.classId,
+          portraitMediaId:
+            patch.portraitMediaId !== undefined ? patch.portraitMediaId : current.portraitMediaId,
+          audioProfileId:
+            patch.audioProfileId !== undefined ? patch.audioProfileId : current.audioProfileId,
+          stats: patch.stats !== undefined ? patch.stats : current.stats,
           summary: patch.summary !== undefined ? patch.summary : current.summary,
         }
       })
@@ -57,14 +107,7 @@ export const useCharacterMetaStore = create<CharacterMetaState>()(
     replaceAll: (metaByCharacterId) => {
       set((state) => {
         state.metaByCharacterId = Object.fromEntries(
-          Object.entries(metaByCharacterId).map(([id, meta]) => [
-            id,
-            {
-              characterType: normalizeCharacterCategory(meta.characterType),
-              raceId: meta.raceId,
-              summary: meta.summary,
-            },
-          ]),
+          Object.entries(metaByCharacterId).map(([id, meta]) => [id, normalizeMeta(meta)]),
         )
       })
     },
