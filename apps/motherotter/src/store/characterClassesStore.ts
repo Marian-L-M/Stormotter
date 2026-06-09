@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { CharacterClass, CharacterClassPatch } from '../admin/characterClassTypes'
+import { normalizeCharacterClass } from '../admin/characterClassTypes'
+import { createDefaultHitDice } from '../admin/diceTypes'
 import { createDefaultProjectContent } from '../lib/defaultProjectContent'
 
 function createId(): string {
@@ -11,15 +13,15 @@ function seedCharacterClass(
   name: string,
   description: string,
   distinctFeatures: string[],
-  abilityIds: string[] = [],
 ): CharacterClass {
   const timestamp = new Date().toISOString()
   return {
     id: createId(),
     name,
     description,
+    hitDice: createDefaultHitDice(8),
     distinctFeatures,
-    abilityIds,
+    levelAbilities: [],
     updatedAt: timestamp,
   }
 }
@@ -53,10 +55,11 @@ export const useCharacterClassesStore = create<CharacterClassesState>()(
 
         if (patch.name !== undefined) characterClass.name = patch.name
         if (patch.description !== undefined) characterClass.description = patch.description
+        if (patch.hitDice !== undefined) characterClass.hitDice = patch.hitDice
         if (patch.distinctFeatures !== undefined) {
           characterClass.distinctFeatures = patch.distinctFeatures
         }
-        if (patch.abilityIds !== undefined) characterClass.abilityIds = patch.abilityIds
+        if (patch.levelAbilities !== undefined) characterClass.levelAbilities = patch.levelAbilities
         characterClass.updatedAt = new Date().toISOString()
       })
     },
@@ -71,7 +74,7 @@ export const useCharacterClassesStore = create<CharacterClassesState>()(
 
     replaceAll: (characterClasses) => {
       set((state) => {
-        state.characterClasses = structuredClone(characterClasses)
+        state.characterClasses = characterClasses.map((entry) => normalizeCharacterClass(entry))
       })
     },
   })),

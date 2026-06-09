@@ -1,8 +1,11 @@
+import type { AttributesContent } from '../admin/attributeTypes'
 import type { AudioProfile } from '../admin/audioProfileTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
 import type { MediaAsset } from '../admin/mediaTypes'
 import type { CharacterClass } from '../admin/characterClassTypes'
 import type { CharacterLineageType } from '../admin/lineageTypes'
+import type { HitPointSource } from '../admin/diceTypes'
+import type { LevelAbilityGrant } from '../admin/levelGrantTypes'
 import type { CharacterStatValues } from '../admin/lineageTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { TaxonomyState } from '../admin/taxonomyTypes'
@@ -17,9 +20,13 @@ export interface SerializedCharacter {
   updatedAt: string
   lineageTypeId: string | null
   classId: string | null
+  level: number
+  levelAbilities: LevelAbilityGrant[]
   portraitMediaId: string | null
   audioProfileId: string | null
   stats: CharacterStatValues
+  hitPointSource: HitPointSource
+  hitPointOverride: number | null
   summary: string
 }
 
@@ -37,6 +44,7 @@ export interface ProjectContent {
   characterClasses: CharacterClass[]
   mediaAssets: MediaAsset[]
   audioProfiles: AudioProfile[]
+  attributes: AttributesContent
   characters: SerializedCharacter[]
   catalogStubs: SerializedCatalogStubs
   taxonomy: TaxonomyState

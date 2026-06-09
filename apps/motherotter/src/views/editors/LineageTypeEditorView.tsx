@@ -1,10 +1,14 @@
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { DiceRollInput } from '../../components/admin/DiceRollInput'
+import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
+import { LevelAbilityEditor } from '../../components/admin/LevelAbilityEditor'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
 import {
   LINEAGE_STAT_KEYS,
   LINEAGE_STAT_LABELS,
   type LineageStatKey,
 } from '../../admin/lineageTypes'
+import { useAttributesStore } from '../../store/attributesStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
@@ -19,6 +23,7 @@ export function LineageTypeEditorView() {
   const updateLineageType = useLineageTypesStore((state) => state.updateLineageType)
   const removeLineageType = useLineageTypesStore((state) => state.removeLineageType)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
+  const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
   const abilities = useContentCatalogStore((state) => state.stubs.abilities)
 
   if (!selectedEntityId || !lineageType) {
@@ -30,13 +35,6 @@ export function LineageTypeEditorView() {
         </button>
       </section>
     )
-  }
-
-  function toggleAbility(abilityId: string) {
-    const next = lineageType!.abilityIds.includes(abilityId)
-      ? lineageType!.abilityIds.filter((id) => id !== abilityId)
-      : [...lineageType!.abilityIds, abilityId]
-    updateLineageType(lineageType!.id, { abilityIds: next })
   }
 
   function updateStatRange(stat: LineageStatKey, field: 'min' | 'max', value: number) {
@@ -56,6 +54,7 @@ export function LineageTypeEditorView() {
     if (!lineageType) return
     removeLineageType(lineageType.id)
     removeTaxonomyEntity(lineageType.id)
+    removeAttributeEntity(lineageType.id)
     closeEntityEditor()
   }
 
@@ -119,33 +118,30 @@ export function LineageTypeEditorView() {
       </fieldset>
 
       <fieldset className="admin-fieldset">
-        <legend>Type abilities</legend>
-        {abilities.length === 0 ? (
-          <p className="admin-empty admin-empty-inline">
-            No abilities defined yet. Create abilities in the Abilities tab, then link them here.
-          </p>
-        ) : (
-          <ul className="admin-checkbox-list">
-            {abilities.map((ability) => (
-              <li key={ability.id}>
-                <label className="admin-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={lineageType.abilityIds.includes(ability.id)}
-                    onChange={() => toggleAbility(ability.id)}
-                  />
-                  <span>
-                    <strong>{ability.title}</strong>
-                    {ability.subtitle ? (
-                      <span className="admin-checkbox-sublabel">{ability.subtitle}</span>
-                    ) : null}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
+        <legend>Hit point bonus dice</legend>
+        <DiceRollInput
+          value={lineageType.hitPointBonusDice}
+          onChange={(hitPointBonusDice) =>
+            updateLineageType(lineageType.id, { hitPointBonusDice })
+          }
+          allowEmpty
+          hint="Extra dice added to class hit die when rolling HP. Set dice count to 0 for none."
+        />
       </fieldset>
+
+      <LevelAbilityEditor
+        label="Type abilities by level"
+        grants={lineageType.levelAbilities}
+        abilities={abilities}
+        onChange={(levelAbilities) => updateLineageType(lineageType.id, { levelAbilities })}
+        hint="Abilities unlock when a character of this type reaches each level."
+      />
+
+      <EntityLevelAttributeFields
+        entityId={lineageType.id}
+        entityLabel="character type"
+        hint="Add innate attributes at level 1, then unlock more at higher levels — same pattern as abilities."
+      />
 
       <TaxonomyEditorFields domain="character-types" entityId={lineageType.id} />
 

@@ -1,7 +1,11 @@
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { DiceRollInput } from '../../components/admin/DiceRollInput'
+import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
+import { LevelAbilityEditor } from '../../components/admin/LevelAbilityEditor'
 import { StringListEditor } from '../../components/admin/StringListEditor'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
+import { useAttributesStore } from '../../store/attributesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -17,6 +21,7 @@ export function CharacterClassEditorView() {
   const updateCharacterClass = useCharacterClassesStore((state) => state.updateCharacterClass)
   const removeCharacterClass = useCharacterClassesStore((state) => state.removeCharacterClass)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
+  const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
   const abilities = useContentCatalogStore((state) => state.stubs.abilities)
 
   if (!selectedEntityId || !characterClass) {
@@ -30,17 +35,11 @@ export function CharacterClassEditorView() {
     )
   }
 
-  function toggleAbility(abilityId: string) {
-    const next = characterClass!.abilityIds.includes(abilityId)
-      ? characterClass!.abilityIds.filter((id) => id !== abilityId)
-      : [...characterClass!.abilityIds, abilityId]
-    updateCharacterClass(characterClass!.id, { abilityIds: next })
-  }
-
   function handleRemove() {
     if (!characterClass) return
     removeCharacterClass(characterClass.id)
     removeTaxonomyEntity(characterClass.id)
+    removeAttributeEntity(characterClass.id)
     closeEntityEditor()
   }
 
@@ -77,6 +76,16 @@ export function CharacterClassEditorView() {
         />
       </label>
 
+      <fieldset className="admin-fieldset">
+        <legend>Hit dice</legend>
+        <DiceRollInput
+          value={characterClass.hitDice}
+          onChange={(hitDice) => updateCharacterClass(characterClass.id, { hitDice })}
+          hitDiePreset
+          hint="Per-level hit die rolled when gaining levels (BG2-style d4–d12)."
+        />
+      </fieldset>
+
       <StringListEditor
         label="Distinct features"
         items={characterClass.distinctFeatures ?? []}
@@ -87,34 +96,21 @@ export function CharacterClassEditorView() {
         addLabel="Add feature"
       />
 
-      <fieldset className="admin-fieldset">
-        <legend>Class abilities</legend>
-        {abilities.length === 0 ? (
-          <p className="admin-empty admin-empty-inline">
-            No abilities defined yet. Create abilities in the Abilities tab, then link them here.
-          </p>
-        ) : (
-          <ul className="admin-checkbox-list">
-            {abilities.map((ability) => (
-              <li key={ability.id}>
-                <label className="admin-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={characterClass.abilityIds.includes(ability.id)}
-                    onChange={() => toggleAbility(ability.id)}
-                  />
-                  <span>
-                    <strong>{ability.title}</strong>
-                    {ability.subtitle ? (
-                      <span className="admin-checkbox-sublabel">{ability.subtitle}</span>
-                    ) : null}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
-      </fieldset>
+      <LevelAbilityEditor
+        label="Class abilities by level"
+        grants={characterClass.levelAbilities}
+        abilities={abilities}
+        onChange={(levelAbilities) =>
+          updateCharacterClass(characterClass.id, { levelAbilities })
+        }
+        hint="Abilities unlock when a character of this class reaches each level."
+      />
+
+      <EntityLevelAttributeFields
+        entityId={characterClass.id}
+        entityLabel="character class"
+        hint="Add base class attributes at level 1, then unlock more at higher levels — same pattern as abilities."
+      />
 
       <TaxonomyEditorFields domain="character-classes" entityId={characterClass.id} />
 

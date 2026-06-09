@@ -10,6 +10,7 @@ import { ContentTabListView } from './lists/ContentTabListView'
 import { FilesView } from './FilesView'
 import { MapsListView } from './lists/MapsListView'
 import { MediaLibraryTabView } from './MediaLibraryTabView'
+import { AttributesTabView } from './AttributesTabView'
 import { AudioProfilesTabView } from './AudioProfilesTabView'
 import { CharacterClassesTabView } from './CharacterClassesTabView'
 import { CharacterTypesTabView } from './CharacterTypesTabView'
@@ -102,6 +103,10 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
       return <StateVariableEditorView />
     }
     return <StateListView />
+  }
+
+  if (mode === 'attributes') {
+    return <AttributesTabView />
   }
 
   if (mode === 'characters') {

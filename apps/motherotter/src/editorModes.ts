@@ -11,6 +11,7 @@ export const EDITOR_MODES = [
   'containers',
   'abilities',
   'rules',
+  'attributes',
   'settings',
   'files',
 ] as const
@@ -87,6 +88,7 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     label: 'Mechanics',
     children: [
       { id: 'abilities', label: 'Abilities' },
+      { id: 'attributes', label: 'Attributes' },
       { id: 'rules', label: 'Rules' },
     ],
   },
@@ -114,6 +116,7 @@ const MODE_LABELS: Record<EditorMode, string> = {
   containers: 'Containers',
   abilities: 'Abilities',
   rules: 'Rules',
+  attributes: 'Attributes',
   settings: 'Settings',
   files: 'Files',
 }

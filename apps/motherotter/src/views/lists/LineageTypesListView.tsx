@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { LineageTypeListItem } from '../../admin/lineageTypes'
 import { formatStatRangesSummary } from '../../admin/lineageTypes'
+import { summarizeLevelAbilityGrants } from '../../admin/levelGrantTypes'
 import { useAdminList } from '../../admin/useAdminList'
 import type { AdminColumn } from '../../admin/types'
 import { AdminDataTable } from '../../components/admin/AdminDataTable'
@@ -8,7 +9,6 @@ import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
-import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -16,7 +16,6 @@ import { useEditorStore } from '../../store/editorStore'
 export function LineageTypesListView() {
   const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
   const addLineageType = useLineageTypesStore((state) => state.addLineageType)
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
 
   const listItems = useMemo<LineageTypeListItem[]>(
@@ -54,13 +53,7 @@ export function LineageTypesListView() {
     {
       id: 'abilities',
       header: 'Abilities',
-      render: (item) => {
-        if (item.lineageType.abilityIds.length === 0) return '—'
-        const names = item.lineageType.abilityIds
-          .map((id) => abilities.find((ability) => ability.id === id)?.title ?? id)
-          .join(', ')
-        return names
-      },
+      render: (item) => summarizeLevelAbilityGrants(item.lineageType.levelAbilities),
     },
     {
       id: 'updated',

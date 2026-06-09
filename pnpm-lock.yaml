@@ -66,6 +66,9 @@ importers:
       '@otter/game-state':
         specifier: workspace:*
         version: link:../../packages/game-state
+      '@otter/mechanics-core':
+        specifier: workspace:*
+        version: link:../../packages/mechanics-core
       '@otter/otterfile-core':
         specifier: workspace:*
         version: link:../../packages/otterfile-core
@@ -112,9 +115,18 @@ importers:
 
   packages/game-state:
     dependencies:
+      '@otter/mechanics-core':
+        specifier: workspace:*
+        version: link:../mechanics-core
       '@otter/otterfile-core':
         specifier: workspace:*
         version: link:../otterfile-core
+    devDependencies:
+      vitest:
+        specifier: ^3.0.9
+        version: 3.2.6(terser@5.48.0)
+
+  packages/mechanics-core:
     devDependencies:
       vitest:
         specifier: ^3.0.9

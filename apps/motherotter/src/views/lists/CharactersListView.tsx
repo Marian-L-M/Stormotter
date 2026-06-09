@@ -78,6 +78,11 @@ export function CharactersListView({ characterType }: CharactersListViewProps) {
       },
     },
     {
+      id: 'level',
+      header: 'Level',
+      render: (item) => metaByCharacterId[item.id]?.level ?? 1,
+    },
+    {
       id: 'updated',
       header: 'Last modified',
       render: (item) => formatTimestamp(item.updatedAt),

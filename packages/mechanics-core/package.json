@@ -1,5 +1,5 @@
 {
-  "name": "@otter/game-state",
+  "name": "@otter/mechanics-core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,10 +17,6 @@
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "@otter/mechanics-core": "workspace:*",
-    "@otter/otterfile-core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^3.0.9"

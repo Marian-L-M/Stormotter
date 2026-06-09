@@ -29,13 +29,18 @@ export type LineageStatRanges = Record<LineageStatKey, StatRange>
 
 export type CharacterStatValues = Record<LineageStatKey, number | null>
 
+import { createEmptyBonusDice, normalizeDiceRoll, type DiceRoll } from './diceTypes'
+import { normalizeLevelAbilityGrants, type LevelAbilityGrant } from './levelGrantTypes'
+
 export interface CharacterLineageType {
   id: string
   name: string
   description: string
   statRanges: LineageStatRanges
-  /** Ability ids from the Abilities tab granted by this type */
-  abilityIds: string[]
+  /** Extra hit dice added on top of class hit die (0 dice = none) */
+  hitPointBonusDice: DiceRoll
+  /** Abilities granted at specific levels */
+  levelAbilities: LevelAbilityGrant[]
   updatedAt: string
 }
 
@@ -49,8 +54,25 @@ export interface LineageTypeListItem {
 }
 
 export type LineageTypePatch = Partial<
-  Pick<CharacterLineageType, 'name' | 'description' | 'statRanges' | 'abilityIds'>
+  Pick<
+    CharacterLineageType,
+    'name' | 'description' | 'statRanges' | 'hitPointBonusDice' | 'levelAbilities'
+  >
 >
+
+export function normalizeLineageType(
+  raw: Partial<CharacterLineageType> & { abilityIds?: string[] },
+): CharacterLineageType {
+  return {
+    id: raw.id ?? '',
+    name: raw.name ?? '',
+    description: raw.description ?? '',
+    statRanges: normalizeStatRanges(raw.statRanges),
+    hitPointBonusDice: normalizeDiceRoll(raw.hitPointBonusDice ?? createEmptyBonusDice()),
+    levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities, raw.abilityIds),
+    updatedAt: raw.updatedAt ?? new Date().toISOString(),
+  }
+}
 
 export function createDefaultStatRanges(): LineageStatRanges {
   return {

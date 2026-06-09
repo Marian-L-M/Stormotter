@@ -2,23 +2,26 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import {
   createDefaultStatRanges,
+  normalizeLineageType,
   type CharacterLineageType,
   type LineageTypePatch,
 } from '../admin/lineageTypes'
+import { createEmptyBonusDice } from '../admin/diceTypes'
 import { createDefaultProjectContent } from '../lib/defaultProjectContent'
 
 function createId(): string {
   return `lineage-${crypto.randomUUID().slice(0, 8)}`
 }
 
-function seedLineageType(name: string, description: string, abilityIds: string[] = []): CharacterLineageType {
+function seedLineageType(name: string, description: string): CharacterLineageType {
   const timestamp = new Date().toISOString()
   return {
     id: createId(),
     name,
     description,
     statRanges: createDefaultStatRanges(),
-    abilityIds,
+    hitPointBonusDice: createEmptyBonusDice(),
+    levelAbilities: [],
     updatedAt: timestamp,
   }
 }
@@ -53,7 +56,8 @@ export const useLineageTypesStore = create<LineageTypesState>()(
         if (patch.name !== undefined) lineageType.name = patch.name
         if (patch.description !== undefined) lineageType.description = patch.description
         if (patch.statRanges !== undefined) lineageType.statRanges = patch.statRanges
-        if (patch.abilityIds !== undefined) lineageType.abilityIds = patch.abilityIds
+        if (patch.hitPointBonusDice !== undefined) lineageType.hitPointBonusDice = patch.hitPointBonusDice
+        if (patch.levelAbilities !== undefined) lineageType.levelAbilities = patch.levelAbilities
         lineageType.updatedAt = new Date().toISOString()
       })
     },
@@ -68,7 +72,7 @@ export const useLineageTypesStore = create<LineageTypesState>()(
 
     replaceAll: (lineageTypes) => {
       set((state) => {
-        state.lineageTypes = structuredClone(lineageTypes)
+        state.lineageTypes = lineageTypes.map((entry) => normalizeLineageType(entry))
       })
     },
   })),

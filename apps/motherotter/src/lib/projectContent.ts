@@ -3,12 +3,22 @@ import {
   type CharacterCategory,
 } from '../admin/characterTypes'
 import type { CharacterClass } from '../admin/characterClassTypes'
-import { migrateLegacyCharacterClassId } from '../admin/characterClassTypes'
+import { migrateLegacyCharacterClassId, normalizeCharacterClass } from '../admin/characterClassTypes'
 import type { CharacterLineageType } from '../admin/lineageTypes'
-import { migrateLegacyLineageId, normalizeCharacterStats, normalizeStatRanges } from '../admin/lineageTypes'
+import {
+  migrateLegacyLineageId,
+  normalizeCharacterStats,
+  normalizeLineageType,
+  normalizeStatRanges,
+} from '../admin/lineageTypes'
+import { createDefaultHitDice, createEmptyBonusDice, normalizeDiceRoll, normalizeHitPointOverride, normalizeHitPointSource } from '../admin/diceTypes'
+import { normalizeCharacterLevel } from '../admin/characterLevelTypes'
+import { normalizeLevelAbilityGrants } from '../admin/levelGrantTypes'
+import { normalizeAttributesContent } from '../admin/attributeTypes'
 import { normalizeAudioProfile } from '../admin/audioProfileTypes'
 import { normalizeTaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem, StubContentType } from '../admin/types'
+import { useAttributesStore } from '../store/attributesStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useCharacterMetaStore } from '../store/characterMetaStore'
@@ -28,6 +38,8 @@ interface LegacyTraitEntry {
   description: string
   distinctFeatures?: string[]
   statRanges?: Partial<CharacterLineageType['statRanges']>
+  hitDice?: Partial<CharacterClass['hitDice']>
+  hitPointBonusDice?: Partial<CharacterLineageType['hitPointBonusDice']>
   abilityIds?: string[]
   updatedAt: string
 }
@@ -49,25 +61,27 @@ type RawProjectContent = Partial<ProjectContent> & {
 }
 
 function migrateLineageType(raw: LegacyTraitEntry): CharacterLineageType {
-  return {
+  return normalizeLineageType({
     id: migrateLegacyLineageId(raw.id),
     name: raw.name,
     description: raw.description ?? '',
     statRanges: normalizeStatRanges(raw.statRanges),
+    hitPointBonusDice: normalizeDiceRoll(raw.hitPointBonusDice ?? createEmptyBonusDice()),
     abilityIds: raw.abilityIds ?? [],
     updatedAt: raw.updatedAt,
-  }
+  })
 }
 
 function migrateCharacterClass(raw: LegacyTraitEntry): CharacterClass {
-  return {
+  return normalizeCharacterClass({
     id: migrateLegacyCharacterClassId(raw.id),
     name: raw.name,
     description: raw.description ?? '',
+    hitDice: normalizeDiceRoll(raw.hitDice ?? createDefaultHitDice(8)),
     distinctFeatures: raw.distinctFeatures ?? [],
     abilityIds: raw.abilityIds ?? [],
     updatedAt: raw.updatedAt,
-  }
+  })
 }
 
 function migrateCharacter(raw: RawCharacter): SerializedCharacter {
@@ -85,9 +99,13 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
       updatedAt: raw.updatedAt,
       lineageTypeId: oldLink ? migrateLegacyLineageId(oldLink) : null,
       classId: null,
+      level: normalizeCharacterLevel(raw.level),
+      levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities),
       portraitMediaId: raw.portraitMediaId ?? null,
       audioProfileId: raw.audioProfileId ?? null,
       stats: normalizeCharacterStats(raw.stats),
+      hitPointSource: normalizeHitPointSource(raw.hitPointSource),
+      hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
       summary: raw.summary ?? '',
     }
   }
@@ -99,9 +117,13 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
     updatedAt: raw.updatedAt,
     lineageTypeId: raw.lineageTypeId ? migrateLegacyLineageId(raw.lineageTypeId) : null,
     classId: raw.classId ? migrateLegacyCharacterClassId(raw.classId) : null,
+    level: normalizeCharacterLevel(raw.level),
+    levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities),
     portraitMediaId: raw.portraitMediaId ?? null,
     audioProfileId: raw.audioProfileId ?? null,
     stats: normalizeCharacterStats(raw.stats),
+    hitPointSource: normalizeHitPointSource(raw.hitPointSource),
+    hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
     summary: raw.summary ?? '',
   }
 }
@@ -125,6 +147,12 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
     audioProfiles: structuredClone(
       (raw.audioProfiles ?? defaults.audioProfiles).map((profile) => normalizeAudioProfile(profile)),
     ),
+    attributes: normalizeAttributesContent(raw.attributes ?? defaults.attributes, {
+      levelGrantEntityIds: new Set([
+        ...characterTypes.map((entry) => entry.id),
+        ...characterClasses.map((entry) => entry.id),
+      ]),
+    }),
     characters: structuredClone((raw.characters ?? defaults.characters).map(migrateCharacter)),
     catalogStubs: structuredClone(raw.catalogStubs ?? defaults.catalogStubs),
     taxonomy: normalizeTaxonomyState(raw.taxonomy),
@@ -137,6 +165,7 @@ export function getProjectContent(): ProjectContent {
   const characterClasses = useCharacterClassesStore.getState().characterClasses
   const mediaAssets = useMediaLibraryStore.getState().assets
   const audioProfiles = useAudioProfilesStore.getState().audioProfiles
+  const attributes = useAttributesStore.getState().getSnapshot()
   const characters = useContentCatalogStore.getState().stubs.characters
   const meta = useCharacterMetaStore.getState().metaByCharacterId
   const stubs = useContentCatalogStore.getState().stubs
@@ -155,6 +184,7 @@ export function getProjectContent(): ProjectContent {
     characterClasses: structuredClone(characterClasses),
     mediaAssets: structuredClone(mediaAssets),
     audioProfiles: structuredClone(audioProfiles),
+    attributes: structuredClone(attributes),
     characters: characters.map((character) => ({
       id: character.id,
       title: character.title,
@@ -162,9 +192,13 @@ export function getProjectContent(): ProjectContent {
       updatedAt: character.updatedAt,
       lineageTypeId: meta[character.id]?.lineageTypeId ?? null,
       classId: meta[character.id]?.classId ?? null,
+      level: meta[character.id]?.level ?? normalizeCharacterLevel(undefined),
+      levelAbilities: meta[character.id]?.levelAbilities ?? [],
       portraitMediaId: meta[character.id]?.portraitMediaId ?? null,
       audioProfileId: meta[character.id]?.audioProfileId ?? null,
       stats: meta[character.id]?.stats ?? normalizeCharacterStats(undefined),
+      hitPointSource: meta[character.id]?.hitPointSource ?? 'derived',
+      hitPointOverride: meta[character.id]?.hitPointOverride ?? null,
       summary: meta[character.id]?.summary ?? '',
     })),
     catalogStubs,
@@ -189,6 +223,7 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
   useCharacterClassesStore.getState().replaceAll(content.characterClasses)
   useMediaLibraryStore.getState().replaceAll(content.mediaAssets)
   useAudioProfilesStore.getState().replaceAll(content.audioProfiles)
+  useAttributesStore.getState().replaceAll(content.attributes)
   useContentCatalogStore.getState().replaceCharacters(content.characters.map(toAdminListItem))
 
   for (const type of CATALOG_STUB_TYPES) {
@@ -203,9 +238,13 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
           characterType: character.characterType,
           lineageTypeId: character.lineageTypeId,
           classId: character.classId,
+          level: character.level,
+          levelAbilities: character.levelAbilities,
           portraitMediaId: character.portraitMediaId,
           audioProfileId: character.audioProfileId,
           stats: character.stats,
+          hitPointSource: character.hitPointSource,
+          hitPointOverride: character.hitPointOverride,
           summary: character.summary,
         },
       ]),

@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import type { CharacterClassListItem } from '../../admin/characterClassTypes'
+import { formatDiceRoll } from '../../admin/diceTypes'
+import { summarizeLevelAbilityGrants } from '../../admin/levelGrantTypes'
 import { useAdminList } from '../../admin/useAdminList'
 import type { AdminColumn } from '../../admin/types'
 import { AdminDataTable } from '../../components/admin/AdminDataTable'
@@ -7,7 +9,6 @@ import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
-import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -15,7 +16,6 @@ import { useEditorStore } from '../../store/editorStore'
 export function CharacterClassesListView() {
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
   const addCharacterClass = useCharacterClassesStore((state) => state.addCharacterClass)
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
 
   const listItems = useMemo<CharacterClassListItem[]>(
@@ -36,6 +36,11 @@ export function CharacterClassesListView() {
   const columns: AdminColumn<CharacterClassListItem>[] = [
     { id: 'title', header: 'Class', render: (item) => item.title },
     {
+      id: 'hitDice',
+      header: 'Hit dice',
+      render: (item) => formatDiceRoll(item.characterClass.hitDice),
+    },
+    {
       id: 'features',
       header: 'Features',
       render: (item) => item.category,
@@ -53,13 +58,7 @@ export function CharacterClassesListView() {
     {
       id: 'abilities',
       header: 'Abilities',
-      render: (item) => {
-        if (item.characterClass.abilityIds.length === 0) return '—'
-        const names = item.characterClass.abilityIds
-          .map((id) => abilities.find((ability) => ability.id === id)?.title ?? id)
-          .join(', ')
-        return names
-      },
+      render: (item) => summarizeLevelAbilityGrants(item.characterClass.levelAbilities),
     },
     {
       id: 'updated',

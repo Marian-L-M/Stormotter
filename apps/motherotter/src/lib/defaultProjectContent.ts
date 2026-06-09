@@ -2,6 +2,9 @@ import { DEFAULT_CHARACTER_CATEGORY } from '../admin/characterTypes'
 import type { CharacterClass } from '../admin/characterClassTypes'
 import type { CharacterLineageType } from '../admin/lineageTypes'
 import { createDefaultStatRanges, createEmptyCharacterStats } from '../admin/lineageTypes'
+import { createDefaultHitDice, createEmptyBonusDice } from '../admin/diceTypes'
+import { DEFAULT_CHARACTER_LEVEL } from '../admin/characterLevelTypes'
+import { createEmptyAttributesContent } from '../admin/attributeTypes'
 import { createEmptyTaxonomyState } from '../admin/taxonomyTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { AdminListItem } from '../admin/types'
@@ -74,7 +77,8 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       name: 'Human',
       description: 'Versatile and widespread; balanced stat potential across all attributes.',
       statRanges: createDefaultStatRanges(),
-      abilityIds: [],
+      hitPointBonusDice: createEmptyBonusDice(),
+      levelAbilities: [],
       updatedAt: timestamp,
     },
     {
@@ -88,7 +92,8 @@ function defaultCharacterTypes(): CharacterLineageType[] {
         constitution: { min: 3, max: 16 },
         intelligence: { min: 5, max: 20 },
       },
-      abilityIds: [],
+      hitPointBonusDice: createEmptyBonusDice(),
+      levelAbilities: [],
       updatedAt: timestamp,
     },
   ]
@@ -101,16 +106,18 @@ function defaultCharacterClasses(): CharacterClass[] {
       id: createCharacterClassId(),
       name: 'Warrior',
       description: 'Front-line fighters trained for melee combat and endurance.',
+      hitDice: createDefaultHitDice(10),
       distinctFeatures: ['Heavy armor proficiency', 'Bonus damage with two-handed weapons'],
-      abilityIds: [],
+      levelAbilities: [],
       updatedAt: timestamp,
     },
     {
       id: createCharacterClassId(),
       name: 'Mage',
       description: 'Arcane casters who channel elemental and utility spells.',
+      hitDice: createDefaultHitDice(4),
       distinctFeatures: ['Spell focus bonus', 'Reduced mana cost for cantrips'],
-      abilityIds: [],
+      levelAbilities: [],
       updatedAt: timestamp,
     },
   ]
@@ -126,9 +133,13 @@ function defaultCharacters(): SerializedCharacter[] {
       updatedAt: timestamp,
       lineageTypeId: null,
       classId: null,
+      level: DEFAULT_CHARACTER_LEVEL,
+      levelAbilities: [],
       portraitMediaId: null,
       audioProfileId: null,
       stats: createEmptyCharacterStats(),
+      hitPointSource: 'derived',
+      hitPointOverride: null,
       summary: '',
     },
   ]
@@ -160,6 +171,7 @@ export function createDefaultProjectContent(): ProjectContent {
     characterClasses: defaultCharacterClasses(),
     mediaAssets: [],
     audioProfiles: [],
+    attributes: createEmptyAttributesContent(),
     characters: defaultCharacters(),
     catalogStubs: defaultCatalogStubs(),
     taxonomy: createEmptyTaxonomyState(),

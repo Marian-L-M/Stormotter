@@ -35,6 +35,10 @@ export default defineConfig({
         rootDir,
         '../../packages/game-state/src/index.ts',
       ),
+      '@otter/mechanics-core': path.resolve(
+        rootDir,
+        '../../packages/mechanics-core/src/index.ts',
+      ),
       '@otter/renderer-api': path.resolve(
         rootDir,
         '../../packages/renderer-api/src/index.ts',

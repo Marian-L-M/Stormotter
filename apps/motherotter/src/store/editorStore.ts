@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { cellKey, type WorldModel } from '@otter/game-state'
 import { packOtterfile, type OtterfileDocument } from '@otter/otterfile-core'
+import type { AttributeSource } from '../admin/attributeTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
 import {
   DEFAULT_MEDIA_MAX_FILE_BYTES,
@@ -43,6 +44,7 @@ export interface EditorState {
   projects: ProjectSummary[]
   activeMode: EditorMode
   characterTypeTab: CharacterCategory
+  attributeSourceTab: AttributeSource
   editorScreen: EditorScreen
   selectedEntityId: string | null
   gameId: string
@@ -64,6 +66,7 @@ export interface EditorState {
   deleteProject: (projectId: string) => Promise<void>
   setActiveMode: (mode: EditorMode) => void
   setCharacterTypeTab: (tab: CharacterCategory) => void
+  setAttributeSourceTab: (tab: AttributeSource) => void
   openEntityEditor: (id: string) => void
   closeEntityEditor: () => void
   setGameId: (gameId: string) => void
@@ -143,6 +146,7 @@ export const useEditorStore = create<EditorState>()(
     projects: [],
     activeMode: 'maps',
     characterTypeTab: DEFAULT_CHARACTER_CATEGORY,
+    attributeSourceTab: 'standard' as AttributeSource,
     editorScreen: 'list',
     selectedEntityId: null,
     gameId: '',
@@ -309,12 +313,21 @@ export const useEditorStore = create<EditorState>()(
         if (!isCharacterSectionMode(mode)) {
           state.characterTypeTab = DEFAULT_CHARACTER_CATEGORY
         }
+        if (mode !== 'attributes') {
+          state.attributeSourceTab = 'standard'
+        }
       })
     },
 
     setCharacterTypeTab: (tab) => {
       set((state) => {
         state.characterTypeTab = tab
+      })
+    },
+
+    setAttributeSourceTab: (tab) => {
+      set((state) => {
+        state.attributeSourceTab = tab
       })
     },
 

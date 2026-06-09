@@ -11,9 +11,13 @@ import {
   type LineageStatKey,
 } from '../../admin/lineageTypes'
 import { countFilledProfileTriggers } from '../../admin/audioProfileTypes'
+import { CharacterAttributeFields } from '../../components/admin/CharacterAttributeFields'
+import { CharacterHitPointsFields } from '../../components/admin/CharacterHitPointsFields'
+import { CharacterLevelAbilityFields } from '../../components/admin/CharacterLevelAbilityFields'
 import { MediaPickerField } from '../../components/media/MediaPickerField'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
+import { useAttributesStore } from '../../store/attributesStore'
 import { useAudioProfilesStore } from '../../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useCharacterMetaStore, DEFAULT_META } from '../../store/characterMetaStore'
@@ -38,9 +42,11 @@ export function CharacterEditorView() {
   const updateMeta = useCharacterMetaStore((state) => state.updateMeta)
   const removeMeta = useCharacterMetaStore((state) => state.removeMeta)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
+  const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
   const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
   const audioProfiles = useAudioProfilesStore((state) => state.audioProfiles)
+  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
 
   if (!selectedEntityId || !item) {
     return (
@@ -60,12 +66,16 @@ export function CharacterEditorView() {
   const linkedAudioProfile = meta.audioProfileId
     ? audioProfiles.find((entry) => entry.id === meta.audioProfileId)
     : undefined
+  const linkedCharacterClass = meta.classId
+    ? characterClasses.find((entry) => entry.id === meta.classId)
+    : undefined
 
   function handleRemove() {
     if (!item) return
     removeItem('characters', item.id)
     removeMeta(item.id)
     removeTaxonomyEntity(item.id)
+    removeAttributeEntity(item.id)
     closeEntityEditor()
   }
 
@@ -188,6 +198,24 @@ export function CharacterEditorView() {
         ) : null}
       </label>
 
+      <CharacterHitPointsFields
+        meta={meta}
+        linkedClass={linkedCharacterClass}
+        linkedLineageType={linkedLineageType}
+        onChange={(patch) => updateMeta(item.id, patch)}
+      />
+
+      <CharacterLevelAbilityFields
+        characterLevel={meta.level}
+        typeGrants={linkedLineageType?.levelAbilities}
+        classGrants={linkedCharacterClass?.levelAbilities}
+        characterGrants={meta.levelAbilities}
+        typeName={linkedLineageType?.name}
+        className={linkedCharacterClass?.name}
+        abilities={abilities}
+        onChange={(levelAbilities) => updateMeta(item.id, { levelAbilities })}
+      />
+
       <fieldset className="admin-fieldset">
         <legend>Stats</legend>
         {!linkedLineageType ? (
@@ -230,6 +258,15 @@ export function CharacterEditorView() {
           })}
         </div>
       </fieldset>
+
+      <CharacterAttributeFields
+        characterId={item.id}
+        characterLevel={meta.level}
+        lineageTypeId={meta.lineageTypeId}
+        classId={meta.classId}
+        lineageTypeName={linkedLineageType?.name}
+        className={linkedCharacterClass?.name}
+      />
 
       <label className="field">
         <span>Summary</span>

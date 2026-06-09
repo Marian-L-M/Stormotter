@@ -18,6 +18,7 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
+      "@otter/mechanics-core": ["../../packages/mechanics-core/src/index.ts"],
       "@otter/otterfile-core": ["../../packages/otterfile-core/src/index.ts"],
       "@otter/game-state": ["../../packages/game-state/src/index.ts"],
       "@otter/renderer-api": ["../../packages/renderer-api/src/index.ts"],
