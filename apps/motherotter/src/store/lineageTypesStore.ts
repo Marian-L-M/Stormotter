@@ -22,6 +22,10 @@ function seedLineageType(name: string, description: string): CharacterLineageTyp
     statRanges: createDefaultStatRanges(),
     hitPointBonusDice: createEmptyBonusDice(),
     levelAbilities: [],
+    slotRules: {},
+    hiddenInventoryActivatesUnequipped: null,
+    derivedStatBases: {},
+    derivedStatModifiers: {},
     updatedAt: timestamp,
   }
 }
@@ -58,6 +62,10 @@ export const useLineageTypesStore = create<LineageTypesState>()(
         if (patch.statRanges !== undefined) lineageType.statRanges = patch.statRanges
         if (patch.hitPointBonusDice !== undefined) lineageType.hitPointBonusDice = patch.hitPointBonusDice
         if (patch.levelAbilities !== undefined) lineageType.levelAbilities = patch.levelAbilities
+        if (patch.slotRules !== undefined) lineageType.slotRules = patch.slotRules
+        if (patch.hiddenInventoryActivatesUnequipped !== undefined) {
+          lineageType.hiddenInventoryActivatesUnequipped = patch.hiddenInventoryActivatesUnequipped
+        }
         lineageType.updatedAt = new Date().toISOString()
       })
     },

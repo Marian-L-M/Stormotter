@@ -15,6 +15,8 @@ import { createDefaultHitDice, createEmptyBonusDice, normalizeDiceRoll, normaliz
 import { normalizeCharacterLevel } from '../admin/characterLevelTypes'
 import { normalizeLevelAbilityGrants } from '../admin/levelGrantTypes'
 import { normalizeAttributesContent } from '../admin/attributeTypes'
+import { migrateStubToItem, normalizeItem } from '../admin/itemTypes'
+import { migrateStubToContainer, migrateLegacyContainers, normalizeContainer } from '../admin/containerTypes'
 import { normalizeAudioProfile } from '../admin/audioProfileTypes'
 import { normalizeTaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem, StubContentType } from '../admin/types'
@@ -22,7 +24,10 @@ import { useAttributesStore } from '../store/attributesStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useCharacterMetaStore } from '../store/characterMetaStore'
+import { useItemRegistrySettingsStore } from '../store/itemRegistrySettingsStore'
 import { useContentCatalogStore } from '../store/contentCatalogStore'
+import { useContainersStore } from '../store/containersStore'
+import { useItemsStore } from '../store/itemsStore'
 import { useLineageTypesStore } from '../store/lineageTypesStore'
 import { useMediaLibraryStore } from '../store/mediaLibraryStore'
 import { useStateVariablesStore } from '../store/stateVariablesStore'
@@ -107,6 +112,12 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
       hitPointSource: normalizeHitPointSource(raw.hitPointSource),
       hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
       summary: raw.summary ?? '',
+      slotRules: raw.slotRules,
+      hiddenInventoryActivatesUnequipped: raw.hiddenInventoryActivatesUnequipped ?? null,
+      activeMainHandSlot: raw.activeMainHandSlot,
+      activeOffHandSlot: raw.activeOffHandSlot,
+      derivedStatBases: raw.derivedStatBases,
+      derivedStatModifiers: raw.derivedStatModifiers,
     }
   }
 
@@ -125,6 +136,12 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
     hitPointSource: normalizeHitPointSource(raw.hitPointSource),
     hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
     summary: raw.summary ?? '',
+    slotRules: raw.slotRules,
+    hiddenInventoryActivatesUnequipped: raw.hiddenInventoryActivatesUnequipped ?? null,
+    activeMainHandSlot: raw.activeMainHandSlot,
+    activeOffHandSlot: raw.activeOffHandSlot,
+    derivedStatBases: raw.derivedStatBases,
+    derivedStatModifiers: raw.derivedStatModifiers,
   }
 }
 
@@ -139,6 +156,32 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
     characterTypes = raw.classes.map(migrateLineageType)
   }
 
+  let items = (raw.items ?? []).map((entry) => normalizeItem(entry))
+  if (items.length === 0 && raw.catalogStubs?.items?.length) {
+    items = raw.catalogStubs.items.map(migrateStubToItem)
+  }
+
+  let containers = (raw.containers ?? []).map((entry) => normalizeContainer(entry))
+  if (containers.length === 0 && raw.catalogStubs?.containers?.length) {
+    containers = raw.catalogStubs.containers.map(migrateStubToContainer)
+  }
+
+  const { containers: migratedContainers, containerIdMap } = migrateLegacyContainers(containers)
+  containers = migratedContainers
+
+  if (containerIdMap.size > 0) {
+    items = items.map((item) => {
+      if (item.containerId && containerIdMap.has(item.containerId)) {
+        return { ...item, containerId: containerIdMap.get(item.containerId)! }
+      }
+      return item
+    })
+  }
+
+  const catalogStubs = structuredClone(raw.catalogStubs ?? defaults.catalogStubs)
+  catalogStubs.items = []
+  catalogStubs.containers = []
+
   return {
     stateVariables: structuredClone(raw.stateVariables ?? defaults.stateVariables),
     characterTypes: structuredClone(characterTypes),
@@ -151,11 +194,18 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
       levelGrantEntityIds: new Set([
         ...characterTypes.map((entry) => entry.id),
         ...characterClasses.map((entry) => entry.id),
+        ...items.map((entry) => entry.id),
       ]),
     }),
+    items: structuredClone(items),
+    containers: structuredClone(containers),
     characters: structuredClone((raw.characters ?? defaults.characters).map(migrateCharacter)),
-    catalogStubs: structuredClone(raw.catalogStubs ?? defaults.catalogStubs),
+    catalogStubs,
     taxonomy: normalizeTaxonomyState(raw.taxonomy),
+    itemCategorySlotSettings: structuredClone(
+      raw.itemCategorySlotSettings ?? defaults.itemCategorySlotSettings,
+    ),
+    itemClassSlotSettings: structuredClone(raw.itemClassSlotSettings ?? defaults.itemClassSlotSettings),
   }
 }
 
@@ -166,8 +216,11 @@ export function getProjectContent(): ProjectContent {
   const mediaAssets = useMediaLibraryStore.getState().assets
   const audioProfiles = useAudioProfilesStore.getState().audioProfiles
   const attributes = useAttributesStore.getState().getSnapshot()
+  const items = useItemsStore.getState().items
+  const containers = useContainersStore.getState().containers
   const characters = useContentCatalogStore.getState().stubs.characters
   const meta = useCharacterMetaStore.getState().metaByCharacterId
+  const itemRegistrySettings = useItemRegistrySettingsStore.getState()
   const stubs = useContentCatalogStore.getState().stubs
 
   const catalogStubs: SerializedCatalogStubs = {
@@ -185,6 +238,8 @@ export function getProjectContent(): ProjectContent {
     mediaAssets: structuredClone(mediaAssets),
     audioProfiles: structuredClone(audioProfiles),
     attributes: structuredClone(attributes),
+    items: structuredClone(items),
+    containers: structuredClone(containers),
     characters: characters.map((character) => ({
       id: character.id,
       title: character.title,
@@ -200,9 +255,17 @@ export function getProjectContent(): ProjectContent {
       hitPointSource: meta[character.id]?.hitPointSource ?? 'derived',
       hitPointOverride: meta[character.id]?.hitPointOverride ?? null,
       summary: meta[character.id]?.summary ?? '',
+      slotRules: meta[character.id]?.slotRules,
+      hiddenInventoryActivatesUnequipped: meta[character.id]?.hiddenInventoryActivatesUnequipped ?? null,
+      activeMainHandSlot: meta[character.id]?.activeMainHandSlot,
+      activeOffHandSlot: meta[character.id]?.activeOffHandSlot,
+      derivedStatBases: meta[character.id]?.derivedStatBases,
+      derivedStatModifiers: meta[character.id]?.derivedStatModifiers,
     })),
     catalogStubs,
     taxonomy: getTaxonomySnapshot(),
+    itemCategorySlotSettings: structuredClone(itemRegistrySettings.categorySettings),
+    itemClassSlotSettings: structuredClone(itemRegistrySettings.classSettings),
   }
 }
 
@@ -224,6 +287,11 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
   useMediaLibraryStore.getState().replaceAll(content.mediaAssets)
   useAudioProfilesStore.getState().replaceAll(content.audioProfiles)
   useAttributesStore.getState().replaceAll(content.attributes)
+  useItemsStore.getState().replaceAll(content.items)
+  useContainersStore.getState().replaceAll(content.containers)
+  useContainersStore.getState().syncAllCharacterInventories(
+    content.characters.map((character) => ({ id: character.id, title: character.title })),
+  )
   useContentCatalogStore.getState().replaceCharacters(content.characters.map(toAdminListItem))
 
   for (const type of CATALOG_STUB_TYPES) {
@@ -246,10 +314,21 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
           hitPointSource: character.hitPointSource,
           hitPointOverride: character.hitPointOverride,
           summary: character.summary,
+          slotRules: character.slotRules ?? {},
+          hiddenInventoryActivatesUnequipped: character.hiddenInventoryActivatesUnequipped ?? null,
+          activeMainHandSlot: character.activeMainHandSlot ?? 0,
+          activeOffHandSlot: character.activeOffHandSlot ?? 0,
+          derivedStatBases: character.derivedStatBases ?? {},
+          derivedStatModifiers: character.derivedStatModifiers ?? {},
         },
       ]),
     ),
   )
+
+  useItemRegistrySettingsStore.getState().replaceAll({
+    categorySettings: content.itemCategorySlotSettings,
+    classSettings: content.itemClassSlotSettings,
+  })
 
   useTaxonomyStore.getState().replaceAll(content.taxonomy)
 }

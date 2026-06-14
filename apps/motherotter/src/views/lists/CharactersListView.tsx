@@ -10,6 +10,7 @@ import { AdminPagination } from '../../components/admin/AdminPagination'
 import type { AdminColumn, AdminListItem } from '../../admin/types'
 import { formatTimestamp } from '../../lib/format'
 import { useCharacterMetaStore } from '../../store/characterMetaStore'
+import { useContainersStore } from '../../store/containersStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
@@ -23,6 +24,7 @@ interface CharactersListViewProps {
 export function CharactersListView({ characterType }: CharactersListViewProps) {
   const allItems = useContentCatalogStore((state) => state.stubs.characters)
   const addItem = useContentCatalogStore((state) => state.addItem)
+  const ensureCharacterInventory = useContainersStore((state) => state.ensureCharacterInventory)
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
   const metaByCharacterId = useCharacterMetaStore((state) => state.metaByCharacterId)
   const updateMeta = useCharacterMetaStore((state) => state.updateMeta)
@@ -92,6 +94,8 @@ export function CharactersListView({ characterType }: CharactersListViewProps) {
   function handleAdd() {
     const id = addItem('characters', characterType)
     updateMeta(id, { characterType })
+    const created = useContentCatalogStore.getState().getItem('characters', id)
+    ensureCharacterInventory(id, created?.title ?? 'Character')
     openEntityEditor(id)
   }
 

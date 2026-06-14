@@ -48,6 +48,7 @@ export const DEFAULT_STATS: RegistryEntry[] = [
   { id: 'constitution', key: 'constitution', name: 'Constitution' },
   { id: 'intelligence', key: 'intelligence', name: 'Intelligence' },
   { id: 'wisdom', key: 'wisdom', name: 'Wisdom' },
+  { id: 'perception', key: 'perception', name: 'Perception' },
   { id: 'charisma', key: 'charisma', name: 'Charisma' },
   { id: 'luck', key: 'luck', name: 'Luck' },
 ]
@@ -56,8 +57,10 @@ export const DEFAULT_SAVE_TYPES: RegistryEntry[] = [
   { id: 'spell', key: 'spell', name: 'Spell' },
   { id: 'breath', key: 'breath', name: 'Breath weapon' },
   { id: 'death', key: 'death', name: 'Death magic' },
-  { id: 'petrification', key: 'petrification', name: 'Petrification' },
+  { id: 'petrification', key: 'petrification', name: 'Stunning' },
   { id: 'polymorph', key: 'polymorph', name: 'Polymorph' },
+  { id: 'charisma', key: 'charisma', name: 'Charisma' },
+  { id: 'luck', key: 'luck', name: 'Luck' },
 ]
 
 export const DEFAULT_CONDITIONS: RegistryEntry[] = [

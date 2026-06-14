@@ -4,6 +4,7 @@ export const LINEAGE_STAT_KEYS = [
   'constitution',
   'intelligence',
   'wisdom',
+  'perception',
   'charisma',
   'luck',
 ] as const
@@ -16,6 +17,7 @@ export const LINEAGE_STAT_LABELS: Record<LineageStatKey, string> = {
   constitution: 'Constitution',
   intelligence: 'Intelligence',
   wisdom: 'Wisdom',
+  perception: 'Perception',
   charisma: 'Charisma',
   luck: 'Luck',
 }
@@ -31,6 +33,13 @@ export type CharacterStatValues = Record<LineageStatKey, number | null>
 
 import { createEmptyBonusDice, normalizeDiceRoll, type DiceRoll } from './diceTypes'
 import { normalizeLevelAbilityGrants, type LevelAbilityGrant } from './levelGrantTypes'
+import { normalizeSlotRules, type SlotRulesMap } from './slotRules'
+import {
+  normalizeDerivedStatBaseMap,
+  normalizeDerivedStatModifierMap,
+  type DerivedStatBaseMap,
+  type DerivedStatModifierMap,
+} from './derivedStatTypes'
 
 export interface CharacterLineageType {
   id: string
@@ -41,6 +50,14 @@ export interface CharacterLineageType {
   hitPointBonusDice: DiceRoll
   /** Abilities granted at specific levels */
   levelAbilities: LevelAbilityGrant[]
+  /** Slot enable/disable overrides (null = inherit from class) */
+  slotRules: SlotRulesMap
+  /** Whether hidden inventory can activate unequipped items (null = inherit) */
+  hiddenInventoryActivatesUnequipped: boolean | null
+  /** Derived stat base overrides (null per stat = inherit) */
+  derivedStatBases: DerivedStatBaseMap
+  /** Flat bonuses applied to derived stats for this type */
+  derivedStatModifiers: DerivedStatModifierMap
   updatedAt: string
 }
 
@@ -56,7 +73,15 @@ export interface LineageTypeListItem {
 export type LineageTypePatch = Partial<
   Pick<
     CharacterLineageType,
-    'name' | 'description' | 'statRanges' | 'hitPointBonusDice' | 'levelAbilities'
+    | 'name'
+    | 'description'
+    | 'statRanges'
+    | 'hitPointBonusDice'
+    | 'levelAbilities'
+    | 'slotRules'
+    | 'hiddenInventoryActivatesUnequipped'
+    | 'derivedStatBases'
+    | 'derivedStatModifiers'
   >
 >
 
@@ -70,6 +95,14 @@ export function normalizeLineageType(
     statRanges: normalizeStatRanges(raw.statRanges),
     hitPointBonusDice: normalizeDiceRoll(raw.hitPointBonusDice ?? createEmptyBonusDice()),
     levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities, raw.abilityIds),
+    slotRules: normalizeSlotRules(raw.slotRules),
+    hiddenInventoryActivatesUnequipped:
+      raw.hiddenInventoryActivatesUnequipped === true ||
+      raw.hiddenInventoryActivatesUnequipped === false
+        ? raw.hiddenInventoryActivatesUnequipped
+        : null,
+    derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
+    derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -81,6 +114,7 @@ export function createDefaultStatRanges(): LineageStatRanges {
     constitution: { min: 3, max: 18 },
     intelligence: { min: 3, max: 18 },
     wisdom: { min: 3, max: 18 },
+    perception: { min: 3, max: 18 },
     charisma: { min: 3, max: 18 },
     luck: { min: 3, max: 18 },
   }
@@ -119,6 +153,7 @@ export function createEmptyCharacterStats(): CharacterStatValues {
     constitution: null,
     intelligence: null,
     wisdom: null,
+    perception: null,
     charisma: null,
     luck: null,
   }

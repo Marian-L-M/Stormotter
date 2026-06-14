@@ -12,6 +12,9 @@ import { MapsListView } from './lists/MapsListView'
 import { MediaLibraryTabView } from './MediaLibraryTabView'
 import { AttributesTabView } from './AttributesTabView'
 import { AudioProfilesTabView } from './AudioProfilesTabView'
+import { ItemsTabView } from './ItemsTabView'
+import { ContainersTabView } from './ContainersTabView'
+import { TriggersTabView } from './TriggersTabView'
 import { CharacterClassesTabView } from './CharacterClassesTabView'
 import { CharacterTypesTabView } from './CharacterTypesTabView'
 import { SettingsListView } from './lists/SettingsListView'
@@ -109,6 +112,10 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
     return <AttributesTabView />
   }
 
+  if (mode === 'triggers') {
+    return <TriggersTabView />
+  }
+
   if (mode === 'characters') {
     return <CharactersTabView />
   }
@@ -119,6 +126,14 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
 
   if (mode === 'character-classes') {
     return <CharacterClassesTabView />
+  }
+
+  if (mode === 'items') {
+    return <ItemsTabView />
+  }
+
+  if (mode === 'containers') {
+    return <ContainersTabView />
   }
 
   if (isStubContentType(mode)) {

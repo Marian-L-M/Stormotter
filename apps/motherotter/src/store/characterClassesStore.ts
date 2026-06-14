@@ -22,6 +22,10 @@ function seedCharacterClass(
     hitDice: createDefaultHitDice(8),
     distinctFeatures,
     levelAbilities: [],
+    slotRules: {},
+    hiddenInventoryActivatesUnequipped: null,
+    derivedStatBases: {},
+    derivedStatModifiers: {},
     updatedAt: timestamp,
   }
 }
@@ -60,6 +64,10 @@ export const useCharacterClassesStore = create<CharacterClassesState>()(
           characterClass.distinctFeatures = patch.distinctFeatures
         }
         if (patch.levelAbilities !== undefined) characterClass.levelAbilities = patch.levelAbilities
+        if (patch.slotRules !== undefined) characterClass.slotRules = patch.slotRules
+        if (patch.hiddenInventoryActivatesUnequipped !== undefined) {
+          characterClass.hiddenInventoryActivatesUnequipped = patch.hiddenInventoryActivatesUnequipped
+        }
         characterClass.updatedAt = new Date().toISOString()
       })
     },

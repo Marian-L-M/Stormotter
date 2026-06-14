@@ -13,6 +13,9 @@ import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
+import { DerivedStatBaseEditor } from '../../components/admin/DerivedStatBaseEditor'
+import { DerivedStatModifierEditor } from '../../components/admin/DerivedStatModifierEditor'
+import { SlotRulesEditor, HiddenInventoryToggleField } from '../../components/admin/SlotRulesEditor'
 
 export function LineageTypeEditorView() {
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId)
@@ -143,7 +146,35 @@ export function LineageTypeEditorView() {
         hint="Add innate attributes at level 1, then unlock more at higher levels — same pattern as abilities."
       />
 
+      <DerivedStatBaseEditor
+        value={lineageType.derivedStatBases}
+        onChange={(derivedStatBases) => updateLineageType(lineageType.id, { derivedStatBases })}
+        inheritHint="Type base overrides class default, but is overridden by character-specific bases."
+      />
+
+      <DerivedStatModifierEditor
+        value={lineageType.derivedStatModifiers}
+        onChange={(derivedStatModifiers) =>
+          updateLineageType(lineageType.id, { derivedStatModifiers })
+        }
+        legend="Type derived stat modifiers"
+        hint="Bonuses from this character type stacked with class, character, items, attributes, and abilities."
+      />
+
       <TaxonomyEditorFields domain="character-types" entityId={lineageType.id} />
+
+      <SlotRulesEditor
+        value={lineageType.slotRules}
+        onChange={(slotRules) => updateLineageType(lineageType.id, { slotRules })}
+        inheritLabel="Inherit from class defaults"
+      />
+
+      <HiddenInventoryToggleField
+        value={lineageType.hiddenInventoryActivatesUnequipped}
+        onChange={(hiddenInventoryActivatesUnequipped) =>
+          updateLineageType(lineageType.id, { hiddenInventoryActivatesUnequipped })
+        }
+      />
 
       <div className="admin-editor-actions">
         <button type="button" className="admin-danger-button" onClick={handleRemove}>

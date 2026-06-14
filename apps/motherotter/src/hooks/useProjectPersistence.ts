@@ -6,6 +6,8 @@ import { useContentCatalogStore } from '../store/contentCatalogStore'
 import { useEditorStore } from '../store/editorStore'
 import { useMediaLibraryStore } from '../store/mediaLibraryStore'
 import { useAttributesStore } from '../store/attributesStore'
+import { useContainersStore } from '../store/containersStore'
+import { useItemsStore } from '../store/itemsStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useLineageTypesStore } from '../store/lineageTypesStore'
@@ -166,6 +168,26 @@ export function useProjectPersistence() {
       }
     })
 
+    const unsubscribeItems = useItemsStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
+    const unsubscribeContainers = useContainersStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
     return () => {
       unsubscribeEditor()
       unsubscribeCatalog()
@@ -175,6 +197,8 @@ export function useProjectPersistence() {
       unsubscribeMedia()
       unsubscribeAudioProfiles()
       unsubscribeAttributes()
+      unsubscribeItems()
+      unsubscribeContainers()
       unsubscribeMeta()
       unsubscribeTaxonomy()
       if (timerRef.current) clearTimeout(timerRef.current)

@@ -12,7 +12,6 @@ import {
   normalizeCharacterStats,
   type CharacterStatValues,
 } from '../admin/lineageTypes'
-
 import {
   normalizeHitPointOverride,
   normalizeHitPointSource,
@@ -20,6 +19,14 @@ import {
 } from '../admin/diceTypes'
 import { DEFAULT_CHARACTER_LEVEL, normalizeCharacterLevel } from '../admin/characterLevelTypes'
 import { normalizeLevelAbilityGrants, type LevelAbilityGrant } from '../admin/levelGrantTypes'
+import { MAIN_HAND_SLOT_COUNT, OFF_HAND_SLOT_COUNT } from '../admin/characterSlotTypes'
+import { normalizeSlotRules, type SlotRulesMap } from '../admin/slotRules'
+import {
+  normalizeDerivedStatBaseMap,
+  normalizeDerivedStatModifierMap,
+  type DerivedStatBaseMap,
+  type DerivedStatModifierMap,
+} from '../admin/derivedStatTypes'
 
 export interface CharacterMeta {
   characterType: CharacterCategory
@@ -33,6 +40,12 @@ export interface CharacterMeta {
   hitPointSource: HitPointSource
   hitPointOverride: number | null
   summary: string
+  slotRules: SlotRulesMap
+  hiddenInventoryActivatesUnequipped: boolean | null
+  activeMainHandSlot: number
+  activeOffHandSlot: number
+  derivedStatBases: DerivedStatBaseMap
+  derivedStatModifiers: DerivedStatModifierMap
 }
 
 const DEFAULT_META: CharacterMeta = {
@@ -47,6 +60,12 @@ const DEFAULT_META: CharacterMeta = {
   hitPointSource: 'derived',
   hitPointOverride: null,
   summary: '',
+  slotRules: {},
+  hiddenInventoryActivatesUnequipped: null,
+  activeMainHandSlot: 0,
+  activeOffHandSlot: 0,
+  derivedStatBases: {},
+  derivedStatModifiers: {},
 }
 
 export { DEFAULT_META }
@@ -59,9 +78,27 @@ interface CharacterMetaState {
   replaceAll: (metaByCharacterId: Record<string, CharacterMeta>) => void
 }
 
+function normalizeHandSlotIndex(raw: number | undefined, max: number): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0
+  return Math.min(Math.max(Math.floor(raw), 0), max - 1)
+}
+
 function normalizeMeta(
   raw: Partial<CharacterMeta> & { raceId?: string | null; classId?: string | null; audioMediaId?: string | null },
 ): CharacterMeta {
+  const shared = {
+    slotRules: normalizeSlotRules(raw.slotRules),
+    hiddenInventoryActivatesUnequipped:
+      raw.hiddenInventoryActivatesUnequipped === true ||
+      raw.hiddenInventoryActivatesUnequipped === false
+        ? raw.hiddenInventoryActivatesUnequipped
+        : null,
+    activeMainHandSlot: normalizeHandSlotIndex(raw.activeMainHandSlot, MAIN_HAND_SLOT_COUNT),
+    activeOffHandSlot: normalizeHandSlotIndex(raw.activeOffHandSlot, OFF_HAND_SLOT_COUNT),
+    derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
+    derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
+  }
+
   const hasNewShape = raw.lineageTypeId !== undefined
   if (!hasNewShape) {
     const oldLink = raw.classId ?? raw.raceId ?? null
@@ -77,6 +114,7 @@ function normalizeMeta(
       hitPointSource: normalizeHitPointSource(raw.hitPointSource),
       hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
       summary: raw.summary ?? '',
+      ...shared,
     }
   }
 
@@ -92,6 +130,7 @@ function normalizeMeta(
     hitPointSource: normalizeHitPointSource(raw.hitPointSource),
     hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
     summary: raw.summary ?? '',
+    ...shared,
   }
 }
 
@@ -104,30 +143,10 @@ export const useCharacterMetaStore = create<CharacterMetaState>()(
     updateMeta: (characterId, patch) => {
       set((state) => {
         const current = state.metaByCharacterId[characterId] ?? { ...DEFAULT_META }
-        state.metaByCharacterId[characterId] = {
-          characterType:
-            patch.characterType !== undefined
-              ? patch.characterType
-              : current.characterType,
-          lineageTypeId:
-            patch.lineageTypeId !== undefined ? patch.lineageTypeId : current.lineageTypeId,
-          classId: patch.classId !== undefined ? patch.classId : current.classId,
-          level: patch.level !== undefined ? normalizeCharacterLevel(patch.level) : current.level,
-          levelAbilities:
-            patch.levelAbilities !== undefined
-              ? normalizeLevelAbilityGrants(patch.levelAbilities)
-              : current.levelAbilities,
-          portraitMediaId:
-            patch.portraitMediaId !== undefined ? patch.portraitMediaId : current.portraitMediaId,
-          audioProfileId:
-            patch.audioProfileId !== undefined ? patch.audioProfileId : current.audioProfileId,
-          stats: patch.stats !== undefined ? patch.stats : current.stats,
-          hitPointSource:
-            patch.hitPointSource !== undefined ? patch.hitPointSource : current.hitPointSource,
-          hitPointOverride:
-            patch.hitPointOverride !== undefined ? patch.hitPointOverride : current.hitPointOverride,
-          summary: patch.summary !== undefined ? patch.summary : current.summary,
-        }
+        state.metaByCharacterId[characterId] = normalizeMeta({
+          ...current,
+          ...patch,
+        })
       })
     },
 

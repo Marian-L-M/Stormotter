@@ -5,6 +5,8 @@ import { createDefaultStatRanges, createEmptyCharacterStats } from '../admin/lin
 import { createDefaultHitDice, createEmptyBonusDice } from '../admin/diceTypes'
 import { DEFAULT_CHARACTER_LEVEL } from '../admin/characterLevelTypes'
 import { createEmptyAttributesContent } from '../admin/attributeTypes'
+import { createEmptyItem } from '../admin/itemTypes'
+import { createEmptyContainer } from '../admin/containerTypes'
 import { createEmptyTaxonomyState } from '../admin/taxonomyTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { AdminListItem } from '../admin/types'
@@ -79,6 +81,10 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       statRanges: createDefaultStatRanges(),
       hitPointBonusDice: createEmptyBonusDice(),
       levelAbilities: [],
+      slotRules: {},
+      hiddenInventoryActivatesUnequipped: null,
+      derivedStatBases: {},
+      derivedStatModifiers: {},
       updatedAt: timestamp,
     },
     {
@@ -94,6 +100,10 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       },
       hitPointBonusDice: createEmptyBonusDice(),
       levelAbilities: [],
+      slotRules: {},
+      hiddenInventoryActivatesUnequipped: null,
+      derivedStatBases: {},
+      derivedStatModifiers: {},
       updatedAt: timestamp,
     },
   ]
@@ -109,6 +119,10 @@ function defaultCharacterClasses(): CharacterClass[] {
       hitDice: createDefaultHitDice(10),
       distinctFeatures: ['Heavy armor proficiency', 'Bonus damage with two-handed weapons'],
       levelAbilities: [],
+      slotRules: {},
+      hiddenInventoryActivatesUnequipped: null,
+      derivedStatBases: {},
+      derivedStatModifiers: {},
       updatedAt: timestamp,
     },
     {
@@ -118,6 +132,10 @@ function defaultCharacterClasses(): CharacterClass[] {
       hitDice: createDefaultHitDice(4),
       distinctFeatures: ['Spell focus bonus', 'Reduced mana cost for cantrips'],
       levelAbilities: [],
+      slotRules: {},
+      hiddenInventoryActivatesUnequipped: null,
+      derivedStatBases: {},
+      derivedStatModifiers: {},
       updatedAt: timestamp,
     },
   ]
@@ -154,11 +172,19 @@ function createDefaultStub(type: string, title: string): AdminListItem {
   }
 }
 
+function defaultItems() {
+  return [createEmptyItem('New Item 1')]
+}
+
+function defaultContainers() {
+  return [createEmptyContainer('New Unique Container 1', 'unique')]
+}
+
 function defaultCatalogStubs(): SerializedCatalogStubs {
   return {
     stories: [createDefaultStub('stories', 'New Storie 1')],
-    items: [createDefaultStub('items', 'New Item 1')],
-    containers: [createDefaultStub('containers', 'New Container 1')],
+    items: [],
+    containers: [],
     abilities: [createDefaultStub('abilities', 'New Abilitie 1')],
     rules: [createDefaultStub('rules', 'New Rule 1')],
   }
@@ -172,8 +198,12 @@ export function createDefaultProjectContent(): ProjectContent {
     mediaAssets: [],
     audioProfiles: [],
     attributes: createEmptyAttributesContent(),
+    items: defaultItems(),
+    containers: defaultContainers(),
     characters: defaultCharacters(),
     catalogStubs: defaultCatalogStubs(),
     taxonomy: createEmptyTaxonomyState(),
+    itemCategorySlotSettings: {},
+    itemClassSlotSettings: {},
   }
 }

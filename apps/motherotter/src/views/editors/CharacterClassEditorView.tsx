@@ -9,6 +9,9 @@ import { useAttributesStore } from '../../store/attributesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
+import { DerivedStatBaseEditor } from '../../components/admin/DerivedStatBaseEditor'
+import { DerivedStatModifierEditor } from '../../components/admin/DerivedStatModifierEditor'
+import { SlotRulesEditor, HiddenInventoryToggleField } from '../../components/admin/SlotRulesEditor'
 
 export function CharacterClassEditorView() {
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId)
@@ -112,7 +115,37 @@ export function CharacterClassEditorView() {
         hint="Add base class attributes at level 1, then unlock more at higher levels — same pattern as abilities."
       />
 
+      <DerivedStatBaseEditor
+        value={characterClass.derivedStatBases}
+        onChange={(derivedStatBases) =>
+          updateCharacterClass(characterClass.id, { derivedStatBases })
+        }
+        inheritHint="Class base overrides type default, but is overridden by character-specific bases."
+      />
+
+      <DerivedStatModifierEditor
+        value={characterClass.derivedStatModifiers}
+        onChange={(derivedStatModifiers) =>
+          updateCharacterClass(characterClass.id, { derivedStatModifiers })
+        }
+        legend="Class derived stat modifiers"
+        hint="Bonuses from this class stacked with type, character, items, attributes, and abilities."
+      />
+
       <TaxonomyEditorFields domain="character-classes" entityId={characterClass.id} />
+
+      <SlotRulesEditor
+        value={characterClass.slotRules}
+        onChange={(slotRules) => updateCharacterClass(characterClass.id, { slotRules })}
+        inheritLabel="Default (no parent rule)"
+      />
+
+      <HiddenInventoryToggleField
+        value={characterClass.hiddenInventoryActivatesUnequipped}
+        onChange={(hiddenInventoryActivatesUnequipped) =>
+          updateCharacterClass(characterClass.id, { hiddenInventoryActivatesUnequipped })
+        }
+      />
 
       <div className="admin-editor-actions">
         <button type="button" className="admin-danger-button" onClick={handleRemove}>

@@ -1,3 +1,5 @@
+import type { Container } from '../admin/containerTypes'
+import type { Item } from '../admin/itemTypes'
 import type { AttributesContent } from '../admin/attributeTypes'
 import type { AudioProfile } from '../admin/audioProfileTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
@@ -10,6 +12,9 @@ import type { CharacterStatValues } from '../admin/lineageTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { TaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem } from '../admin/types'
+import type { ItemSlotPlacementSettings } from '../admin/slotRules'
+import type { SlotRulesMap } from '../admin/slotRules'
+import type { DerivedStatBaseMap, DerivedStatModifierMap } from '../admin/derivedStatTypes'
 import type { EditorMode } from '../editorModes'
 import type { EditorTool } from '../editorTools'
 
@@ -28,6 +33,12 @@ export interface SerializedCharacter {
   hitPointSource: HitPointSource
   hitPointOverride: number | null
   summary: string
+  slotRules?: SlotRulesMap
+  hiddenInventoryActivatesUnequipped?: boolean | null
+  activeMainHandSlot?: number
+  activeOffHandSlot?: number
+  derivedStatBases?: DerivedStatBaseMap
+  derivedStatModifiers?: DerivedStatModifierMap
 }
 
 export interface SerializedCatalogStubs {
@@ -45,9 +56,13 @@ export interface ProjectContent {
   mediaAssets: MediaAsset[]
   audioProfiles: AudioProfile[]
   attributes: AttributesContent
+  items: Item[]
+  containers: Container[]
   characters: SerializedCharacter[]
   catalogStubs: SerializedCatalogStubs
   taxonomy: TaxonomyState
+  itemCategorySlotSettings: Record<string, ItemSlotPlacementSettings>
+  itemClassSlotSettings: Record<string, ItemSlotPlacementSettings>
 }
 
 export interface SerializedCell {

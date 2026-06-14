@@ -4,6 +4,8 @@ import { cellKey, type WorldModel } from '@otter/game-state'
 import { packOtterfile, type OtterfileDocument } from '@otter/otterfile-core'
 import type { AttributeSource } from '../admin/attributeTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
+import type { ContainerSectionTab } from '../admin/containerTypes'
+import type { ItemSectionTab } from '../admin/itemTypes'
 import {
   DEFAULT_MEDIA_MAX_FILE_BYTES,
   DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
@@ -44,6 +46,8 @@ export interface EditorState {
   projects: ProjectSummary[]
   activeMode: EditorMode
   characterTypeTab: CharacterCategory
+  itemSectionTab: ItemSectionTab
+  containerSectionTab: ContainerSectionTab
   attributeSourceTab: AttributeSource
   editorScreen: EditorScreen
   selectedEntityId: string | null
@@ -66,6 +70,8 @@ export interface EditorState {
   deleteProject: (projectId: string) => Promise<void>
   setActiveMode: (mode: EditorMode) => void
   setCharacterTypeTab: (tab: CharacterCategory) => void
+  setItemSectionTab: (tab: ItemSectionTab) => void
+  setContainerSectionTab: (tab: ContainerSectionTab) => void
   setAttributeSourceTab: (tab: AttributeSource) => void
   openEntityEditor: (id: string) => void
   closeEntityEditor: () => void
@@ -146,6 +152,8 @@ export const useEditorStore = create<EditorState>()(
     projects: [],
     activeMode: 'maps',
     characterTypeTab: DEFAULT_CHARACTER_CATEGORY,
+    itemSectionTab: 'items' as ItemSectionTab,
+    containerSectionTab: 'unique' as ContainerSectionTab,
     attributeSourceTab: 'standard' as AttributeSource,
     editorScreen: 'list',
     selectedEntityId: null,
@@ -322,6 +330,18 @@ export const useEditorStore = create<EditorState>()(
     setCharacterTypeTab: (tab) => {
       set((state) => {
         state.characterTypeTab = tab
+      })
+    },
+
+    setItemSectionTab: (tab) => {
+      set((state) => {
+        state.itemSectionTab = tab
+      })
+    },
+
+    setContainerSectionTab: (tab) => {
+      set((state) => {
+        state.containerSectionTab = tab
       })
     },
 

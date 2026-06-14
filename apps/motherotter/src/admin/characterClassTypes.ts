@@ -7,6 +7,13 @@ import {
   normalizeLevelAbilityGrants,
   type LevelAbilityGrant,
 } from './levelGrantTypes'
+import { normalizeSlotRules, type SlotRulesMap } from './slotRules'
+import {
+  normalizeDerivedStatBaseMap,
+  normalizeDerivedStatModifierMap,
+  type DerivedStatBaseMap,
+  type DerivedStatModifierMap,
+} from './derivedStatTypes'
 
 export interface CharacterClass {
   id: string
@@ -18,6 +25,14 @@ export interface CharacterClass {
   distinctFeatures: string[]
   /** Abilities granted at specific levels */
   levelAbilities: LevelAbilityGrant[]
+  /** Slot enable/disable overrides (null = enabled by default) */
+  slotRules: SlotRulesMap
+  /** Whether hidden inventory can activate unequipped items (null = default false) */
+  hiddenInventoryActivatesUnequipped: boolean | null
+  /** Derived stat base overrides (null per stat = inherit) */
+  derivedStatBases: DerivedStatBaseMap
+  /** Flat bonuses applied to derived stats for this class */
+  derivedStatModifiers: DerivedStatModifierMap
   updatedAt: string
 }
 
@@ -31,7 +46,18 @@ export interface CharacterClassListItem {
 }
 
 export type CharacterClassPatch = Partial<
-  Pick<CharacterClass, 'name' | 'description' | 'hitDice' | 'distinctFeatures' | 'levelAbilities'>
+  Pick<
+    CharacterClass,
+    | 'name'
+    | 'description'
+    | 'hitDice'
+    | 'distinctFeatures'
+    | 'levelAbilities'
+    | 'slotRules'
+    | 'hiddenInventoryActivatesUnequipped'
+    | 'derivedStatBases'
+    | 'derivedStatModifiers'
+  >
 >
 
 export function normalizeCharacterClass(
@@ -44,6 +70,14 @@ export function normalizeCharacterClass(
     hitDice: normalizeDiceRoll(raw.hitDice ?? createDefaultHitDice(8)),
     distinctFeatures: raw.distinctFeatures ?? [],
     levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities, raw.abilityIds),
+    slotRules: normalizeSlotRules(raw.slotRules),
+    hiddenInventoryActivatesUnequipped:
+      raw.hiddenInventoryActivatesUnequipped === true ||
+      raw.hiddenInventoryActivatesUnequipped === false
+        ? raw.hiddenInventoryActivatesUnequipped
+        : null,
+    derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
+    derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }
