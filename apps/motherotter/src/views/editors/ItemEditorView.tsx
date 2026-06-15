@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
+import { EntityLevelAbilityFields } from '../../components/admin/EntityLevelAbilityFields'
 import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
 import { ItemEffectsEditor } from '../../components/admin/ItemEffectsEditor'
 import { ItemRequirementsEditor } from '../../components/admin/ItemRequirementsEditor'
@@ -16,6 +17,7 @@ import {
   type ItemScope,
 } from '../../admin/itemTypes'
 import { CONTAINER_KIND_LABELS, containerKindUsesUniqueItems } from '../../admin/containerTypes'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
 import { useItemsStore } from '../../store/itemsStore'
 import { useContainersStore } from '../../store/containersStore'
@@ -41,6 +43,7 @@ export function ItemEditorView() {
   const updateItem = useItemsStore((state) => state.updateItem)
   const removeItem = useItemsStore((state) => state.removeItem)
   const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
+  const removeAbilityEntity = useAbilitiesStore((state) => state.removeEntity)
   const containers = useContainersStore((state) => state.containers)
 
   const containerOptions = containers.filter((entry) => containerKindUsesUniqueItems(entry.kind))
@@ -62,6 +65,7 @@ export function ItemEditorView() {
   function handleRemove() {
     removeItem(item.id)
     removeAttributeEntity(item.id)
+    removeAbilityEntity(item.id)
     closeEntityEditor()
   }
 
@@ -285,6 +289,11 @@ export function ItemEditorView() {
               Requirements to use or equip this item, plus abilities and effects when equipped,
               consumed, used, or triggered.
             </p>
+            <EntityLevelAbilityFields
+              entityId={item.id}
+              entityLabel="item"
+              hint="Abilities granted while this item is equipped. Use level 1 for always-on effects; set a trigger for reactive abilities."
+            />
             <ItemRequirementsEditor
               requirements={item.requirements}
               onChange={(requirements) => updateItem(item.id, { requirements })}

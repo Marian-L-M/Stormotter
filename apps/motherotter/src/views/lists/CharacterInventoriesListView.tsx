@@ -8,17 +8,17 @@ import {
   QUICK_SLOT_COUNT,
   QUIVER_SLOT_COUNT,
 } from '../../admin/characterSlotTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import { textColumn } from '../../admin/adminColumnHelpers'
+import { READ_ONLY_TABLE_FEATURES } from '../../admin/entityListActions'
 import type { AdminColumn, AdminListItem } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
 import { useContainersStore } from '../../store/containersStore'
-import { useItemsStore } from '../../store/itemsStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useItemsStore } from '../../store/itemsStore'
 
 interface CharacterInventoryListItem extends AdminListItem {
   filledSlots: number
@@ -33,7 +33,7 @@ export function CharacterInventoriesListView() {
 
   const totalSlots = CHARACTER_SLOT_DEFINITIONS.length
 
-  const listItems: CharacterInventoryListItem[] = useMemo(
+  const listItems = useMemo<CharacterInventoryListItem[]>(
     () =>
       characters.map((character) => {
         const slotContainers = containers.filter(
@@ -58,50 +58,44 @@ export function CharacterInventoriesListView() {
     [characters, containers, items, totalSlots],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<CharacterInventoryListItem>[]>(
+    () => [
+      textColumn('title', 'Character', (item) => item.title, { primaryLink: true }),
+      textColumn('slots', 'Filled slots', (item) => `${item.filledSlots} / ${item.totalSlots}`, {
+        sortValue: (item) => item.filledSlots,
+      }),
+      textColumn(
+        'layout',
+        'Layout',
+        () =>
+          `${MAIN_HAND_SLOT_COUNT}+${OFF_HAND_SLOT_COUNT} hands · ${QUICK_SLOT_COUNT} quick · ${QUIVER_SLOT_COUNT} quiver · ${PUBLIC_STORAGE_SLOT_COUNT} public · ${HIDDEN_STORAGE_SLOT_COUNT} hidden`,
+        { sortable: false, filter: { type: 'none' } },
+      ),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn<CharacterInventoryListItem>[] = [
-    { id: 'title', header: 'Character', render: (item) => item.title },
-    {
-      id: 'slots',
-      header: 'Filled slots',
-      render: (item) => `${item.filledSlots} / ${item.totalSlots}`,
-    },
-    {
-      id: 'layout',
-      header: 'Layout',
-      render: () =>
-        `${MAIN_HAND_SLOT_COUNT}+${OFF_HAND_SLOT_COUNT} hands · ${QUICK_SLOT_COUNT} quick · ${QUIVER_SLOT_COUNT} quiver · ${PUBLIC_STORAGE_SLOT_COUNT} public · ${HIDDEN_STORAGE_SLOT_COUNT} hidden`,
-    },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   return (
     <AdminListShell
       title="Character Inventories"
       description="Each character has a fixed inventory: equipment slots plus 20 public and 20 hidden storage cells. Select a character to manage items in each slot."
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable<CharacterInventoryListItem>
+      <AdminListTable<CharacterInventoryListItem>
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        features={READ_ONLY_TABLE_FEATURES}
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{ onEdit: (item) => openEntityEditor(item.id) }}
         emptyMessage="No characters found. Create characters first, then manage their inventories here."
       />
     </AdminListShell>

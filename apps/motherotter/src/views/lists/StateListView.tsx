@@ -1,20 +1,23 @@
 import { useMemo } from 'react'
+import { categoryColumn, textColumn } from '../../admin/adminColumnHelpers'
+import {
+  deleteStateVariableRecord,
+  duplicateStateVariableRecord,
+} from '../../admin/entityListActions'
 import {
   formatDefaultValue,
   STATE_SCOPE_LABELS,
   STATE_TYPE_LABELS,
   type StateVariableListItem,
 } from '../../admin/stateTypes'
-import { useAdminList } from '../../admin/useAdminList'
 import type { AdminColumn } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
-import { useStateVariablesStore } from '../../store/stateVariablesStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useStateVariablesStore } from '../../store/stateVariablesStore'
 
 export function StateListView() {
   const variables = useStateVariablesStore((state) => state.variables)
@@ -36,49 +39,37 @@ export function StateListView() {
     [variables],
   )
 
-  const list = useAdminList({
-    items: listItems,
-    categories: ['Global', 'Character'],
-  })
-
-  const columns: AdminColumn<StateVariableListItem>[] = [
-    {
-      id: 'title',
-      header: 'Variable',
-      render: (item) => (
-        <>
-          <strong>{item.title}</strong>
-          <code className="admin-inline-code">{item.variable.key}</code>
-        </>
-      ),
-    },
-    { id: 'scope', header: 'Scope', render: (item) => item.category },
-    {
-      id: 'type',
-      header: 'Type',
-      render: (item) => STATE_TYPE_LABELS[item.variable.varType],
-    },
-    {
-      id: 'default',
-      header: 'Default',
-      render: (item) => formatDefaultValue(item.variable.defaultValue),
-    },
-    {
-      id: 'character',
-      header: 'Character',
-      render: (item) => {
+  const columns = useMemo<AdminColumn<StateVariableListItem>[]>(
+    () => [
+      textColumn('title', 'Variable', (item) => item.title, {
+        primaryLink: true,
+        render: (item) => (
+          <>
+            <strong>{item.title}</strong>{' '}
+            <code className="admin-inline-code">{item.variable.key}</code>
+          </>
+        ),
+      }),
+      categoryColumn('scope', 'Scope', (item) => item.category, {
+        getCategoryOptions: () => ['Global', 'Character'],
+      }),
+      categoryColumn('type', 'Type', (item) => STATE_TYPE_LABELS[item.variable.varType]),
+      textColumn('default', 'Default', (item) => formatDefaultValue(item.variable.defaultValue)),
+      categoryColumn('character', 'Character', (item) => {
         if (item.variable.scope !== 'character') return '—'
         if (!item.variable.characterId) return 'Any character'
         const character = characters.find((c) => c.id === item.variable.characterId)
         return character?.title ?? item.variable.characterId
-      },
-    },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+      }),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [characters],
+  )
+
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   return (
     <AdminListShell
@@ -102,24 +93,24 @@ export function StateListView() {
           </button>
         </div>
       }
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        entityLabel="variable"
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteStateVariableRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateStateVariableRecord(item.id)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage="No state variables yet. Add a global or character variable for story scripting."
       />
     </AdminListShell>

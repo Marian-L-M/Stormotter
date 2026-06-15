@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { FORMAT_VERSION } from '@otter/otterfile-core'
-import { useAdminList } from '../admin/useAdminList'
+import { categoryColumn, textColumn } from '../admin/adminColumnHelpers'
 import type { AdminColumn, AdminListItem } from '../admin/types'
-import { AdminDataTable } from '../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../components/admin/AdminFilterBar'
 import { AdminListShell } from '../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../components/admin/AdminListTable'
 import { AdminPagination } from '../components/admin/AdminPagination'
 import { downloadBytes } from '../lib/download'
 import { formatTimestamp } from '../lib/format'
@@ -25,7 +24,6 @@ export function FilesView() {
   const importOtterfileAsNew = useEditorStore((state) => state.importOtterfileAsNew)
 
   const [exporting, setExporting] = useState(false)
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const listItems = useMemo<AdminListItem[]>(
     () =>
@@ -39,62 +37,36 @@ export function FilesView() {
     [projects, projectId],
   )
 
-  const list = useAdminList({
-    items: listItems,
-    categories: ['Open', 'Stored'],
-  })
+  const columns = useMemo<AdminColumn<AdminListItem>[]>(
+    () => [
+      textColumn('title', 'Title', (item) => item.title, {
+        primaryLink: true,
+        render: (item) => (
+          <>
+            {item.title}
+            {item.category === 'Open' ? <span className="row-badge">Open</span> : null}
+          </>
+        ),
+      }),
+      textColumn('gameId', 'Game ID', (item) => item.subtitle ?? '—', {
+        render: (item) => <code>{item.subtitle}</code>,
+      }),
+      textColumn('format', 'Format', (item) => {
+        const project = projects.find((entry) => entry.projectId === item.id)
+        return project?.formatVersion ?? '—'
+      }),
+      categoryColumn('status', 'Status', (item) => item.category, {
+        getCategoryOptions: () => ['Open', 'Stored'],
+      }),
+      textColumn('updated', 'Updated', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [projects],
+  )
 
-  const columns: AdminColumn[] = [
-    {
-      id: 'title',
-      header: 'Title',
-      render: (item) => (
-        <>
-          {item.title}
-          {item.category === 'Open' ? <span className="row-badge">Open</span> : null}
-        </>
-      ),
-    },
-    {
-      id: 'gameId',
-      header: 'Game ID',
-      render: (item) => <code>{item.subtitle}</code>,
-    },
-    {
-      id: 'format',
-      header: 'Format',
-      render: (item) => projects.find((p) => p.projectId === item.id)?.formatVersion ?? '—',
-    },
-    {
-      id: 'updated',
-      header: 'Updated',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      render: (item) => {
-        const confirmDelete = pendingDeleteId === item.id
-        const isActive = item.id === projectId
-        return (
-          <div className="row-actions">
-            {!isActive ? (
-              <button type="button" onClick={() => void switchProject(item.id)}>
-                Open
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className={confirmDelete ? 'danger' : undefined}
-              onClick={() => void handleDelete(item.id)}
-            >
-              {confirmDelete ? 'Confirm delete' : 'Delete'}
-            </button>
-          </div>
-        )
-      },
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   async function handleExport() {
     setExporting(true)
@@ -134,16 +106,6 @@ export function FilesView() {
     }
   }
 
-  async function handleDelete(projectIdToDelete: string) {
-    if (pendingDeleteId !== projectIdToDelete) {
-      setPendingDeleteId(projectIdToDelete)
-      return
-    }
-
-    setPendingDeleteId(null)
-    await deleteProject(projectIdToDelete)
-  }
-
   return (
     <>
       <AdminListShell
@@ -151,22 +113,8 @@ export function FilesView() {
         description="Local projects and portable `.otterfile` cartridges."
         addLabel="New project"
         onAdd={() => void createProject()}
-        filters={
-          <AdminFilterBar
-            search={list.search}
-            onSearchChange={list.setSearch}
-            category={list.category}
-            onCategoryChange={list.setCategory}
-            categoryOptions={list.categoryOptions}
-            resultCount={list.totalItems}
-          />
-        }
         pagination={
-          <AdminPagination
-            page={list.page}
-            totalPages={list.totalPages}
-            onPageChange={list.setPage}
-          />
+          <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
         }
       >
         <div className="warning-banner" role="note">
@@ -175,11 +123,26 @@ export function FilesView() {
           permanently. Export important work as `.otterfile` files.
         </div>
 
-        <AdminDataTable
+        <AdminListTable
           columns={columns}
-          items={list.pageItems}
+          items={listItems}
+          table={table}
+          entityLabel="project"
           onRowClick={(item) => {
             if (item.id !== projectId) void switchProject(item.id)
+          }}
+          rowActions={{
+            onEdit: (item) => {
+              if (item.id !== projectId) void switchProject(item.id)
+            },
+            editLabel: 'Open',
+            onDelete: (item) => void deleteProject(item.id),
+            canDelete: (item) => item.id !== projectId,
+          }}
+          onBulkDelete={async (ids) => {
+            for (const id of ids) {
+              if (id !== projectId) await deleteProject(id)
+            }
           }}
           emptyMessage="No local projects yet."
         />

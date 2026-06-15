@@ -1,15 +1,18 @@
 import { useMemo } from 'react'
+import { textColumn } from '../../admin/adminColumnHelpers'
 import { countFilledProfileTriggers } from '../../admin/audioProfileTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import {
+  deleteAudioProfileRecord,
+  duplicateAudioProfileRecord,
+} from '../../admin/entityListActions'
 import type { AdminColumn, AdminListItem } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
 import { useAudioProfilesStore } from '../../store/audioProfilesStore'
-import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
+import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 
 interface AudioProfileListItem extends AdminListItem {
   filledTriggers: number
@@ -39,31 +42,25 @@ export function AudioProfilesListView() {
     [audioProfiles],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<AudioProfileListItem>[]>(
+    () => [
+      textColumn('title', 'Profile', (item) => item.title, { primaryLink: true }),
+      textColumn('triggers', 'Triggers filled', (item) => `${item.filledTriggers} filled`, {
+        sortValue: (item) => item.filledTriggers,
+      }),
+      textColumn('categories', 'Categories', (item) =>
+        getTaxonomySummaryForEntity('audio-profiles', item.id).categories,
+      ),
+      textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity('audio-profiles', item.id).tags),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn<AudioProfileListItem>[] = [
-    { id: 'title', header: 'Profile', render: (item) => item.title },
-    {
-      id: 'triggers',
-      header: 'Triggers filled',
-      render: (item) => `${item.filledTriggers} filled`,
-    },
-    {
-      id: 'categories',
-      header: 'Categories',
-      render: (item) => getTaxonomySummaryForEntity('audio-profiles', item.id).categories,
-    },
-    {
-      id: 'tags',
-      header: 'Tags',
-      render: (item) => getTaxonomySummaryForEntity('audio-profiles', item.id).tags,
-    },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   function handleAdd() {
     openEntityEditor(addAudioProfile())
@@ -75,24 +72,24 @@ export function AudioProfilesListView() {
       description="Reusable voice sets with event triggers. Assign profiles to characters instead of single audio clips."
       addLabel="Add Audio Profile"
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        entityLabel="audio profile"
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteAudioProfileRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateAudioProfileRecord(item.id)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage='No audio profiles yet. Click "Add Audio Profile" to create one.'
       />
     </AdminListShell>

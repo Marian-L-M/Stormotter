@@ -6,11 +6,11 @@ import {
   getCharacterSlotDefinition,
 } from '../../admin/characterSlotTypes'
 import { CONTAINER_VISIBILITY_LABELS } from '../../admin/containerTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import { categoryColumn, textColumn } from '../../admin/adminColumnHelpers'
+import { READ_ONLY_TABLE_FEATURES } from '../../admin/entityListActions'
 import type { AdminColumn, AdminListItem } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { useEditorStore } from '../../store/editorStore'
 
@@ -24,7 +24,7 @@ export function CharacterSlotDefinitionsListView() {
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
   const grouped = characterSlotDefinitionsByGroup()
 
-  const listItems: SlotDefinitionListItem[] = useMemo(
+  const listItems = useMemo<SlotDefinitionListItem[]>(
     () =>
       CHARACTER_SLOT_DEFINITIONS.map((definition) => ({
         id: definition.slotKey,
@@ -38,41 +38,35 @@ export function CharacterSlotDefinitionsListView() {
     [],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<SlotDefinitionListItem>[]>(
+    () => [
+      textColumn('title', 'Slot', (item) => item.title, { primaryLink: true }),
+      categoryColumn('group', 'Group', (item) => item.group),
+      textColumn('key', 'Slot key', (item) => item.slotKey, {
+        render: (item) => <code>{item.slotKey}</code>,
+      }),
+      categoryColumn('visibility', 'Visibility', (item) => item.visibility),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn<SlotDefinitionListItem>[] = [
-    { id: 'title', header: 'Slot', render: (item) => item.title },
-    { id: 'group', header: 'Group', render: (item) => item.group },
-    {
-      id: 'key',
-      header: 'Slot key',
-      render: (item) => <code>{item.slotKey}</code>,
-    },
-    { id: 'visibility', header: 'Visibility', render: (item) => item.visibility },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns, pageSize: 50 })
 
   return (
     <AdminListShell
       title="Slot Definitions"
       description={`Fixed character inventory layout: ${grouped.equipment.length} equipment slots, ${grouped.public_storage.length} public storage slots, and ${grouped.hidden_storage.length} hidden storage slots. Slots are read-only and auto-created for each character.`}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable<SlotDefinitionListItem>
+      <AdminListTable<SlotDefinitionListItem>
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        features={READ_ONLY_TABLE_FEATURES}
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{ onEdit: (item) => openEntityEditor(item.id), editLabel: 'View' }}
         emptyMessage="No slot definitions match your filters."
       />
     </AdminListShell>

@@ -1,14 +1,18 @@
-import { formatTimestamp } from '../../lib/format'
-import { useAdminList } from '../../admin/useAdminList'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
-import { AdminListShell } from '../../components/admin/AdminListShell'
-import { AdminPagination } from '../../components/admin/AdminPagination'
+import { useMemo } from 'react'
+import { textColumn } from '../../admin/adminColumnHelpers'
+import {
+  deleteStubRecord,
+  duplicateStubRecord,
+} from '../../admin/entityListActions'
 import type { AdminColumn, AdminListItem, StubContentType } from '../../admin/types'
 import type { TaxonomyDomain } from '../../admin/taxonomyTypes'
+import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
+import { AdminPagination } from '../../components/admin/AdminPagination'
+import { formatTimestamp } from '../../lib/format'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
-import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
+import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 
 interface ContentTabListViewProps {
   type: StubContentType
@@ -27,26 +31,22 @@ export function ContentTabListView({ type, title, description, addLabel }: Conte
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
   const domain = stubTypeToDomain(type)
 
-  const list = useAdminList({ items })
+  const columns = useMemo<AdminColumn<AdminListItem>[]>(
+    () => [
+      textColumn('title', 'Title', (item) => item.title, { primaryLink: true }),
+      textColumn('categories', 'Categories', (item) =>
+        getTaxonomySummaryForEntity(domain, item.id).categories,
+      ),
+      textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity(domain, item.id).tags),
+      textColumn('updated', 'Last modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [domain],
+  )
 
-  const columns: AdminColumn[] = [
-    { id: 'title', header: 'Title', render: (item) => item.title },
-    {
-      id: 'categories',
-      header: 'Categories',
-      render: (item) => getTaxonomySummaryForEntity(domain, item.id).categories,
-    },
-    {
-      id: 'tags',
-      header: 'Tags',
-      render: (item) => getTaxonomySummaryForEntity(domain, item.id).tags,
-    },
-    {
-      id: 'updated',
-      header: 'Last modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items, columns })
 
   function handleAdd() {
     const id = addItem(type)
@@ -59,24 +59,24 @@ export function ContentTabListView({ type, title, description, addLabel }: Conte
       description={description}
       addLabel={addLabel}
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
-        onRowClick={(item: AdminListItem) => openEntityEditor(item.id)}
+        items={items}
+        table={table}
+        entityLabel={title.toLowerCase().replace(/s$/, '')}
+        onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteStubRecord(type, item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateStubRecord(type, item.id)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage={`No ${title.toLowerCase()} yet. Click "${addLabel}" to create one.`}
       />
     </AdminListShell>

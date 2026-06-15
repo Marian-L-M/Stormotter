@@ -1,20 +1,25 @@
 import { useMemo } from 'react'
+import { textColumn } from '../../admin/adminColumnHelpers'
+import {
+  deleteLineageTypeRecord,
+  duplicateLineageTypeRecord,
+} from '../../admin/entityListActions'
 import type { LineageTypeListItem } from '../../admin/lineageTypes'
 import { formatStatRangesSummary } from '../../admin/lineageTypes'
-import { summarizeLevelAbilityGrants } from '../../admin/levelGrantTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import { summarizeLevelAbilityBindingGrants } from '../../admin/abilityTypes'
 import type { AdminColumn } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
+import { useEditorStore } from '../../store/editorStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
-import { useEditorStore } from '../../store/editorStore'
 
 export function LineageTypesListView() {
   const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
+  const levelAbilityGrants = useAbilitiesStore((state) => state.levelAbilityGrants)
   const addLineageType = useLineageTypesStore((state) => state.addLineageType)
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
 
@@ -31,36 +36,26 @@ export function LineageTypesListView() {
     [lineageTypes],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<LineageTypeListItem>[]>(
+    () => [
+      textColumn('title', 'Type', (item) => item.title, { primaryLink: true }),
+      textColumn('stat-ranges', 'Stat ranges', (item) => item.category),
+      textColumn('categories', 'Categories', (item) =>
+        getTaxonomySummaryForEntity('character-types', item.id).categories,
+      ),
+      textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity('character-types', item.id).tags),
+      textColumn('abilities', 'Abilities', (item) =>
+        summarizeLevelAbilityBindingGrants(levelAbilityGrants[item.id] ?? []),
+      ),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [levelAbilityGrants],
+  )
 
-  const columns: AdminColumn<LineageTypeListItem>[] = [
-    { id: 'title', header: 'Type', render: (item) => item.title },
-    {
-      id: 'stat-ranges',
-      header: 'Stat ranges',
-      render: (item) => item.category,
-    },
-    {
-      id: 'categories',
-      header: 'Categories',
-      render: (item) => getTaxonomySummaryForEntity('character-types', item.id).categories,
-    },
-    {
-      id: 'tags',
-      header: 'Tags',
-      render: (item) => getTaxonomySummaryForEntity('character-types', item.id).tags,
-    },
-    {
-      id: 'abilities',
-      header: 'Abilities',
-      render: (item) => summarizeLevelAbilityGrants(item.lineageType.levelAbilities),
-    },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   function handleAdd() {
     openEntityEditor(addLineageType())
@@ -72,24 +67,24 @@ export function LineageTypesListView() {
       description="Define character lineages with stat ranges, abilities, categories, and tags."
       addLabel="Add Character Type"
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        entityLabel="character type"
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteLineageTypeRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateLineageTypeRecord(item.id)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage='No character types yet. Click "Add Character Type" to define one.'
       />
     </AdminListShell>

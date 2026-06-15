@@ -9,10 +9,11 @@ import {
   DEFAULT_CONDITIONS,
   DEFAULT_MAGIC_EFFECTS,
   DEFAULT_SAVE_TYPES,
-  DEFAULT_STATS,
+  ABILITY_TARGETS,
   RESISTANCE_ROLES,
   STACKING_RULE_LABELS,
   applyEffectTypeConstraints,
+  abilityActionsForEffectType,
   createEmptyMechanic,
   defaultInputTypeForAttributeType,
   deriveCategoryNameForMechanic,
@@ -20,6 +21,7 @@ import {
   formatMechanicComposition,
   getMechanicBlocks,
   hydrateMechanicBuilderDraft,
+  isActiveAbilityMechanic,
   isActiveMechanic,
   syncMechanicWithInputType,
   type AttributeInputType,
@@ -28,11 +30,13 @@ import {
   type MechanicComposition,
 } from '../../admin/attributeTypes'
 import { DamageTypePicker } from './DamageTypePicker'
+import { groupModifierStatOptions } from '../../admin/modifierStatOptions'
 
 interface MechanicBuilderModalProps {
   attributeName: string
   mechanic: MechanicComposition | null
   inputType: AttributeInputType
+  builderMode?: 'attribute' | 'ability'
   onClose: () => void
   onApply: (result: MechanicBuilderApplyResult | null) => void
 }
@@ -45,6 +49,8 @@ type BuilderStep =
   | 'save'
   | 'condition'
   | 'magic'
+  | 'action'
+  | 'target'
   | 'advanced'
 
 const DEFAULT_INPUT_TYPES: AttributeInputType[] = ['percentile', 'number', 'boolean', 'text']
@@ -69,79 +75,96 @@ function stackingOptionsForEffect(
   }))
 }
 
-function getNextStep(draft: MechanicComposition): BuilderStep | null {
+function getNextStep(draft: MechanicComposition, abilityMode: boolean): BuilderStep | null {
   if (!draft.effectTypeId) return 'type'
 
   switch (draft.effectTypeId) {
     case 'damage':
       if (!draft.damageTypeId) return 'damage'
-      return 'advanced'
+      break
     case 'resistance':
       if (!draft.damageTypeId) return 'damage'
       if (!draft.resistanceRoleId) return 'role'
-      return 'advanced'
+      break
     case 'modifier':
       if (!draft.statId) return 'stat'
-      return 'advanced'
+      break
     case 'condition':
       if (!draft.conditionId) return 'condition'
-      return 'advanced'
+      break
     case 'saving_throw':
       if (!draft.saveTypeId) return 'save'
-      return 'advanced'
+      break
     case 'magic':
       if (!draft.customHandlerId) return 'magic'
-      return 'advanced'
+      break
     default:
       return 'type'
   }
+
+  if (abilityMode) {
+    if (!draft.actionTypeId) return 'action'
+    if (!draft.targetId) return 'target'
+  }
+
+  return 'advanced'
 }
 
-function initialActiveStep(draft: MechanicComposition): BuilderStep {
-  if (!isActiveMechanic(draft)) return 'type'
-  return getNextStep(draft) ?? 'type'
+function initialActiveStep(draft: MechanicComposition, abilityMode: boolean): BuilderStep {
+  if (!draft.effectTypeId) return 'type'
+  return getNextStep(draft, abilityMode) ?? 'advanced'
 }
 
 function stepTitle(step: BuilderStep): string {
   switch (step) {
     case 'type':
-      return 'Choose attribute type'
+      return 'Choose effect type'
     case 'damage':
       return 'Choose damage type'
     case 'role':
       return 'Choose resistance role'
     case 'stat':
-      return 'Choose stat'
+      return 'Choose stat target'
     case 'save':
       return 'Choose saving throw'
     case 'condition':
-      return 'Choose condition'
+      return 'Choose trait'
     case 'magic':
       return 'Choose magic effect'
+    case 'action':
+      return 'Choose action type'
+    case 'target':
+      return 'Choose target'
     case 'advanced':
       return 'Input type & stacking'
   }
 }
 
-function stepHint(step: BuilderStep, effectTypeId: string | null): string {
+function stepHint(step: BuilderStep, effectTypeId: string | null, abilityMode: boolean): string {
   switch (step) {
     case 'type':
-      return 'Start with one of the six attribute types. Later blocks depend on this choice.'
+      return abilityMode
+        ? 'What kind of effect does this ability apply? Later steps add action, target, and value rules.'
+        : 'Start with one of the six attribute types. Later blocks depend on this choice.'
     case 'damage':
       return 'Choose a damage group (Physical, Elemental, Magical) or a specific subtype within it.'
     case 'role':
       return 'How does the entity interact with this damage type?'
     case 'stat':
-      return 'Which core stat does this modifier affect?'
+      return 'Ability score or derived stat this modifier adjusts. Use derived stats for AC, saves, spell slots, etc.'
     case 'save':
-      return 'Which saving throw category receives the bonus?'
+      return 'Which saving throw receives the numeric bonus (aligned with character derived save rows).'
     case 'condition':
-      return 'Which status or condition does this attribute represent?'
+      return 'Permanent passive traits the entity always has — not temporary combat states like Stunned or Poisoned.'
     case 'magic':
-      return 'Select a magic school or special arcane effect.'
+      return 'Numeric magic systems: spell power, spells, slots, casting speed, auras, and similar.'
+    case 'action':
+      return 'How the ability applies this effect — e.g. cause damage, buff damage, or debuff damage.'
+    case 'target':
+      return 'Who or what receives the effect when the ability fires.'
     case 'advanced':
       if (effectTypeId === 'damage') {
-        return 'Choose how values are entered on characters and how multiple sources combine. Actual values are set when the attribute is assigned.'
+        return 'Choose how values are entered on characters and how multiple sources combine. Actual values are set when assigned to an entity.'
       }
       return 'Choose how values are entered and how multiple sources combine.'
   }
@@ -174,6 +197,40 @@ function OptionGrid({
   )
 }
 
+function GroupedStatPicker({
+  selectedId,
+  onSelect,
+}: {
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const groups = groupModifierStatOptions()
+
+  return (
+    <div className="mechanic-builder-grouped-options">
+      {groups.map((group) => (
+        <section key={group.id} className="mechanic-builder-option-group">
+          <h4 className="mechanic-builder-option-group-title">{group.label}</h4>
+          <div className="mechanic-builder-options" role="listbox" aria-label={group.label}>
+            {group.options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="option"
+                aria-selected={selectedId === option.id}
+                className={`mechanic-builder-option${selectedId === option.id ? ' is-selected' : ''}`}
+                onClick={() => onSelect(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 function BlockChip({ block }: { block: MechanicBlock }) {
   return (
     <span className={`mechanic-builder-block mechanic-builder-block-${block.kind}`}>{block.label}</span>
@@ -184,15 +241,19 @@ export function MechanicBuilderModal({
   attributeName,
   mechanic,
   inputType,
+  builderMode = 'attribute',
   onClose,
   onApply,
 }: MechanicBuilderModalProps) {
+  const abilityMode = builderMode === 'ability'
   const dialogRef = useRef<HTMLDialogElement>(null)
   const suppressCloseRef = useRef(false)
   const initialState = hydrateMechanicBuilderDraft(mechanic, inputType)
   const [draft, setDraft] = useState<MechanicComposition>(() => initialState.draft)
   const [draftInputType, setDraftInputType] = useState<AttributeInputType>(() => initialState.inputType)
-  const [activeStep, setActiveStep] = useState<BuilderStep>(() => initialActiveStep(initialState.draft))
+  const [activeStep, setActiveStep] = useState<BuilderStep>(() =>
+    initialActiveStep(initialState.draft, abilityMode),
+  )
 
   function handleDialogClose() {
     if (suppressCloseRef.current) return
@@ -214,11 +275,11 @@ export function MechanicBuilderModal({
     [draft, draftInputType],
   )
   const blocks = useMemo(() => getMechanicBlocks(normalizedDraft), [normalizedDraft])
-  const suggestedStep = getNextStep(normalizedDraft) ?? 'type'
+  const suggestedStep = getNextStep(normalizedDraft, abilityMode) ?? 'type'
   const derivedKey = deriveMechanicKey(normalizedDraft, attributeName)
   const derivedCategory = deriveCategoryNameForMechanic(normalizedDraft) ?? '—'
   const preview = formatMechanicComposition(normalizedDraft)
-  const canApply = isActiveMechanic(normalizedDraft)
+  const canApply = abilityMode ? isActiveAbilityMechanic(normalizedDraft) : isActiveMechanic(normalizedDraft)
   const inputTypes = inputTypesForEffect(normalizedDraft.effectTypeId)
   const stackingOptions = stackingOptionsForEffect(normalizedDraft.effectTypeId)
 
@@ -230,6 +291,8 @@ export function MechanicBuilderModal({
     const next = applyEffectTypeConstraints({
       ...createEmptyMechanic(),
       effectTypeId: typeId,
+      actionTypeId: null,
+      targetId: null,
     })
     setDraft(next)
     setDraftInputType(defaultInputTypeForAttributeType(typeId))
@@ -293,8 +356,7 @@ export function MechanicBuilderModal({
         )
       case 'stat':
         return (
-          <OptionGrid
-            options={DEFAULT_STATS}
+          <GroupedStatPicker
             selectedId={normalizedDraft.statId}
             onSelect={(id) => selectValue({ statId: id })}
           />
@@ -321,6 +383,22 @@ export function MechanicBuilderModal({
             options={DEFAULT_MAGIC_EFFECTS}
             selectedId={normalizedDraft.customHandlerId}
             onSelect={(id) => selectValue({ customHandlerId: id })}
+          />
+        )
+      case 'action':
+        return (
+          <OptionGrid
+            options={abilityActionsForEffectType(normalizedDraft.effectTypeId)}
+            selectedId={normalizedDraft.actionTypeId}
+            onSelect={(id) => selectValue({ actionTypeId: id })}
+          />
+        )
+      case 'target':
+        return (
+          <OptionGrid
+            options={ABILITY_TARGETS}
+            selectedId={normalizedDraft.targetId}
+            onSelect={(id) => selectValue({ targetId: id })}
           />
         )
       case 'advanced':
@@ -372,6 +450,9 @@ export function MechanicBuilderModal({
   if (normalizedDraft.effectTypeId === 'saving_throw') stepNav.push('save')
   if (normalizedDraft.effectTypeId === 'condition') stepNav.push('condition')
   if (normalizedDraft.effectTypeId === 'magic') stepNav.push('magic')
+  if (abilityMode && normalizedDraft.effectTypeId) {
+    stepNav.push('action', 'target')
+  }
   if (normalizedDraft.effectTypeId) stepNav.push('advanced')
 
   return createPortal(
@@ -387,7 +468,7 @@ export function MechanicBuilderModal({
       <div className="mechanic-builder-modal-inner">
         <header className="mechanic-builder-modal-header">
           <div>
-            <h2>Build attribute mechanic</h2>
+            <h2>{abilityMode ? 'Build ability mechanic' : 'Build attribute mechanic'}</h2>
             <p className="field-hint">{attributeName}</p>
           </div>
           <button type="button" className="mechanic-builder-modal-close" onClick={onClose} aria-label="Close">
@@ -451,7 +532,7 @@ export function MechanicBuilderModal({
             <div className="mechanic-builder-step-panel">
               <h3>{stepTitle(activeStep)}</h3>
               <p className="field-hint admin-attribute-hint">
-                {stepHint(activeStep, normalizedDraft.effectTypeId)}
+                {stepHint(activeStep, normalizedDraft.effectTypeId, abilityMode)}
               </p>
               {!canApply && normalizedDraft.effectTypeId ? (
                 <p className="field-hint admin-attribute-hint mechanic-builder-apply-hint">

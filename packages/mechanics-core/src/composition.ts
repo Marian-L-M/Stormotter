@@ -1,18 +1,24 @@
 import type { AttributeBinding, AttributeBindingKind, StackingRule, ValueKind } from './bindings.js'
 import { DAMAGE_STACKING_RULES, normalizeAttributeBinding, type DamageStackingRule } from './bindings.js'
 import {
+  ABILITY_TARGETS,
   ATTRIBUTE_TYPES,
   DEFAULT_CONDITIONS,
-  DEFAULT_MAGIC_EFFECTS,
   DEFAULT_MECHANICS_REGISTRY,
-  DEFAULT_SAVE_TYPES,
-  DEFAULT_STATS,
+  abilityActionsForEffectType,
   findDamageTypeGroup,
   findRegistryEntry,
   formatDamageTypeLabel,
   RESISTANCE_ROLES,
+  validateAbilityActionId,
+  validateAbilityTargetId,
   validateDamageTypeId,
+  validateModifierStatId,
+  validateSaveTypeId,
+  validateMagicEffectId,
   validateRegistryId,
+  isDerivedStatModifierId,
+  DERIVED_STAT_MODIFIER_PREFIX,
   type MechanicsRegistry,
 } from './registry.js'
 
@@ -25,6 +31,10 @@ export interface MechanicComposition {
   saveTypeId: string | null
   conditionId: string | null
   customHandlerId: string | null
+  /** Ability builder: how the effect is applied (cause, buff, debuff, …). */
+  actionTypeId: string | null
+  /** Ability builder: who or what receives the effect. */
+  targetId: string | null
   valueKind: ValueKind
   stacking: StackingRule
 }
@@ -38,6 +48,8 @@ export function createEmptyMechanic(): MechanicComposition {
     saveTypeId: null,
     conditionId: null,
     customHandlerId: null,
+    actionTypeId: null,
+    targetId: null,
     valueKind: 'integer',
     stacking: 'add',
   }
@@ -70,14 +82,13 @@ export function normalizeMechanicComposition(
   const effectTypeId = migrateEffectTypeId(raw)
   const damageTypeId = validateDamageTypeId(raw.damageTypeId, null)
   const resistanceRoleId = validateRegistryId(raw.resistanceRoleId, RESISTANCE_ROLES, null)
-  const statId = validateRegistryId(raw.statId, DEFAULT_STATS, null)
-  const saveTypeId = validateRegistryId(raw.saveTypeId, DEFAULT_SAVE_TYPES, null)
+  const statId = validateModifierStatId(raw.statId, null)
+  const saveTypeId = validateSaveTypeId(raw.saveTypeId, null)
   const conditionId = validateRegistryId(raw.conditionId, DEFAULT_CONDITIONS, null)
-  const customHandlerId = validateRegistryId(
-    raw.customHandlerId,
-    DEFAULT_MAGIC_EFFECTS,
-    raw.customHandlerId?.trim() || null,
-  )
+  const customHandlerId = validateMagicEffectId(raw.customHandlerId, raw.customHandlerId?.trim() || null)
+
+  const actionTypeId = validateAbilityActionId(raw.actionTypeId, effectTypeId, null)
+  const targetId = validateAbilityTargetId(raw.targetId, null)
 
   const mechanic: MechanicComposition = {
     effectTypeId,
@@ -87,6 +98,8 @@ export function normalizeMechanicComposition(
     saveTypeId,
     conditionId,
     customHandlerId: customHandlerId && customHandlerId.length > 0 ? customHandlerId : null,
+    actionTypeId,
+    targetId,
     valueKind: isValueKind(raw.valueKind) ? raw.valueKind : defaultValueKindForEffect(effectTypeId, resistanceRoleId),
     stacking: isStackingRule(raw.stacking) ? raw.stacking : defaultStackingForEffect(effectTypeId),
   }
@@ -160,6 +173,12 @@ export function mechanicFromLegacyBinding(binding: Partial<AttributeBinding> | n
 export function isActiveMechanic(mechanic: MechanicComposition | null | undefined): boolean {
   if (!mechanic?.effectTypeId) return false
   return resolveCompositionToBinding(mechanic) !== null
+}
+
+export function isActiveAbilityMechanic(mechanic: MechanicComposition | null | undefined): boolean {
+  if (!isActiveMechanic(mechanic)) return false
+  const normalized = normalizeMechanicComposition(mechanic)
+  return Boolean(normalized.actionTypeId && normalized.targetId)
 }
 
 export function resolveCompositionToBinding(
@@ -276,6 +295,13 @@ export function deriveMechanicKey(
     parts.push(normalized.customHandlerId)
   }
 
+  if (normalized.actionTypeId) {
+    parts.unshift(normalized.actionTypeId)
+  }
+  if (normalized.targetId) {
+    parts.push(normalized.targetId)
+  }
+
   if (parts.length === 0) {
     return slugify(fallbackName)
   }
@@ -302,7 +328,7 @@ function appendDamageBlocks(blocks: MechanicBlock[], damageTypeId: string | null
 export interface MechanicBlock {
   id: string
   label: string
-  kind: 'type' | 'damage' | 'role' | 'stat' | 'save' | 'condition' | 'magic' | 'value' | 'stacking'
+  kind: 'action' | 'type' | 'damage' | 'role' | 'stat' | 'save' | 'condition' | 'magic' | 'target' | 'value' | 'stacking'
 }
 
 export function getMechanicBlocks(
@@ -313,6 +339,11 @@ export function getMechanicBlocks(
   if (!normalized.effectTypeId) return []
 
   const blocks: MechanicBlock[] = []
+  const actionEntry = findRegistryEntry(abilityActionsForEffectType(normalized.effectTypeId), normalized.actionTypeId ?? undefined)
+  if (actionEntry) {
+    blocks.push({ id: 'action', label: actionEntry.name, kind: 'action' })
+  }
+
   const typeEntry = findRegistryEntry(registry.attributeTypes, normalized.effectTypeId)
   blocks.push({ id: 'type', label: typeEntry?.name ?? normalized.effectTypeId, kind: 'type' })
 
@@ -328,7 +359,15 @@ export function getMechanicBlocks(
     }
     case 'modifier': {
       const stat = findRegistryEntry(registry.stats, normalized.statId ?? undefined)
-      if (stat) blocks.push({ id: 'stat', label: stat.name, kind: 'stat' })
+      if (stat) {
+        blocks.push({ id: 'stat', label: stat.name, kind: 'stat' })
+      } else if (isDerivedStatModifierId(normalized.statId)) {
+        blocks.push({
+          id: 'stat',
+          label: formatDerivedStatModifierLabel(normalized.statId),
+          kind: 'stat',
+        })
+      }
       break
     }
     case 'saving_throw': {
@@ -346,6 +385,11 @@ export function getMechanicBlocks(
       if (magic) blocks.push({ id: 'magic', label: magic.name, kind: 'magic' })
       break
     }
+  }
+
+  const targetEntry = findRegistryEntry(ABILITY_TARGETS, normalized.targetId ?? undefined)
+  if (targetEntry) {
+    blocks.push({ id: 'target', label: targetEntry.name, kind: 'target' })
   }
 
   return blocks
@@ -386,6 +430,9 @@ export function applyEffectTypeConstraints(mechanic: MechanicComposition): Mecha
     next.customHandlerId = null
   }
 
+  next.actionTypeId = validateAbilityActionId(next.actionTypeId, next.effectTypeId, null)
+  next.targetId = validateAbilityTargetId(next.targetId, null)
+
   if (next.effectTypeId === 'resistance' && next.resistanceRoleId === 'immunity') {
     next.valueKind = 'boolean'
     next.stacking = 'or'
@@ -416,6 +463,14 @@ function defaultStackingForEffect(effectTypeId: string | null): StackingRule {
   if (effectTypeId === 'damage' || effectTypeId === 'resistance') return 'add'
   if (effectTypeId === 'condition') return 'or'
   return 'add'
+}
+
+function formatDerivedStatModifierLabel(statId: string): string {
+  const slug = statId.slice(DERIVED_STAT_MODIFIER_PREFIX.length)
+  return slug
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }
 
 function slugify(raw: string): string {

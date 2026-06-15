@@ -11,6 +11,7 @@ import { FilesView } from './FilesView'
 import { MapsListView } from './lists/MapsListView'
 import { MediaLibraryTabView } from './MediaLibraryTabView'
 import { AttributesTabView } from './AttributesTabView'
+import { AbilitiesTabView } from './AbilitiesTabView'
 import { AudioProfilesTabView } from './AudioProfilesTabView'
 import { ItemsTabView } from './ItemsTabView'
 import { ContainersTabView } from './ContainersTabView'
@@ -58,8 +59,8 @@ const STUB_TABS: Record<
   },
 }
 
-function isStubContentType(mode: EditorMode): mode is StubContentType {
-  return mode in STUB_TABS
+function isStubContentType(mode: EditorMode): mode is Exclude<StubContentType, 'abilities'> {
+  return mode in STUB_TABS && mode !== 'abilities'
 }
 
 function isSettingsSectionId(id: string): id is SettingsSectionId {
@@ -110,6 +111,10 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
 
   if (mode === 'attributes') {
     return <AttributesTabView />
+  }
+
+  if (mode === 'abilities') {
+    return <AbilitiesTabView />
   }
 
   if (mode === 'triggers') {

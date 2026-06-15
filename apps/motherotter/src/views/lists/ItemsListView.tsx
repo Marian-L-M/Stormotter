@@ -1,4 +1,11 @@
 import { useMemo } from 'react'
+import { categoryColumn, textColumn } from '../../admin/adminColumnHelpers'
+import {
+  READ_ONLY_TABLE_FEATURES,
+  deleteItemRecord,
+  duplicateItemRecord,
+} from '../../admin/entityListActions'
+import type { AdminColumn, AdminListItem } from '../../admin/types'
 import {
   ITEM_CATEGORIES,
   ITEM_CATEGORY_LABELS,
@@ -9,16 +16,13 @@ import {
   summarizeItemRequirements,
   type ItemListItem,
 } from '../../admin/itemTypes'
-import { useAdminList } from '../../admin/useAdminList'
-import type { AdminColumn, AdminListItem } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
-import { useItemsStore } from '../../store/itemsStore'
 import { useContainersStore } from '../../store/containersStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useItemsStore } from '../../store/itemsStore'
 
 type ItemCategoryListItem = AdminListItem & { classCount: number }
 
@@ -46,52 +50,30 @@ export function ItemsListView() {
     [items],
   )
 
-  const list = useAdminList({
-    items: listItems,
-    categories: [
-      ...ITEM_CATEGORIES.map((entry) => entry.name),
-      ITEM_SCOPE_LABELS.unique,
-      ITEM_SCOPE_LABELS.generic,
-    ],
-  })
-
-  const columns: AdminColumn<ItemListItem>[] = [
-    { id: 'title', header: 'Name', render: (item) => item.title },
-    {
-      id: 'scope',
-      header: 'Scope',
-      render: (item) => ITEM_SCOPE_LABELS[item.item.scope],
-    },
-    { id: 'category', header: 'Category', render: (item) => item.category },
-    {
-      id: 'class',
-      header: 'Class',
-      render: (item) => getItemClass(item.item.classId)?.name ?? '—',
-    },
-    {
-      id: 'container',
-      header: 'Container',
-      render: (item) =>
+  const columns = useMemo<AdminColumn<ItemListItem>[]>(
+    () => [
+      textColumn('title', 'Name', (item) => item.title, { primaryLink: true }),
+      categoryColumn('scope', 'Scope', (item) => ITEM_SCOPE_LABELS[item.item.scope]),
+      categoryColumn('category', 'Category', (item) => item.category),
+      textColumn('class', 'Class', (item) => getItemClass(item.item.classId)?.name ?? '—'),
+      textColumn('container', 'Container', (item) =>
         item.item.scope === 'unique'
           ? containerNameById.get(item.item.containerId ?? '') ?? 'Unassigned'
           : '—',
-    },
-    {
-      id: 'requirements',
-      header: 'Requirements',
-      render: (item) => summarizeItemRequirements(item.item.requirements),
-    },
-    {
-      id: 'effects',
-      header: 'Effects',
-      render: (item) => summarizeItemEffects(item.item.effects),
-    },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+      ),
+      textColumn('requirements', 'Requirements', (item) =>
+        summarizeItemRequirements(item.item.requirements),
+      ),
+      textColumn('effects', 'Effects', (item) => summarizeItemEffects(item.item.effects)),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [containerNameById],
+  )
+
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   function handleAdd() {
     openEntityEditor(addItem())
@@ -103,24 +85,24 @@ export function ItemsListView() {
       description="Inventory objects, equipment, consumables, and pickup definitions."
       addLabel="Add Item"
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable<ItemListItem>
+      <AdminListTable<ItemListItem>
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        entityLabel="item"
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteItemRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateItemRecord(item.item)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage="No items match your filters."
       />
     </AdminListShell>
@@ -143,32 +125,32 @@ export function ItemCategoriesListView() {
     [],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<ItemCategoryListItem>[]>(
+    () => [
+      textColumn('title', 'Category', (item) => item.title, { primaryLink: true }),
+      categoryColumn('slot', 'Equip slot', (item) => item.category),
+      textColumn('classes', 'Classes', (item) => String(item.classCount), {
+        sortValue: (item) => item.classCount,
+      }),
+      textColumn('description', 'Description', (item) => item.subtitle ?? ''),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn<ItemCategoryListItem>[] = [
-    { id: 'title', header: 'Category', render: (item) => item.title },
-    { id: 'slot', header: 'Equip slot', render: (item) => item.category },
-    {
-      id: 'classes',
-      header: 'Classes',
-      render: (item) => String(item.classCount),
-    },
-    {
-      id: 'description',
-      header: 'Description',
-      render: (item) => item.subtitle ?? '',
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns, pageSize: 50 })
 
   return (
     <AdminListShell
       title="Item Categories"
       description="Fixed item categories used to classify all items. Categories cannot be edited."
     >
-      <AdminDataTable<ItemCategoryListItem>
+      <AdminListTable<ItemCategoryListItem>
         columns={columns}
-        items={list.filtered}
+        items={listItems}
+        table={table}
+        features={READ_ONLY_TABLE_FEATURES}
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{ onEdit: (item) => openEntityEditor(item.id), editLabel: 'View' }}
         emptyMessage="No categories found."
       />
     </AdminListShell>
@@ -190,43 +172,34 @@ export function ItemClassesListView() {
     [],
   )
 
-  const list = useAdminList({
-    items: listItems,
-    categories: ITEM_CATEGORIES.map((entry) => entry.name),
-  })
+  const columns = useMemo<AdminColumn<AdminListItem>[]>(
+    () => [
+      textColumn('title', 'Class', (item) => item.title, { primaryLink: true }),
+      categoryColumn('category', 'Category', (item) => item.category, {
+        getCategoryOptions: () => ITEM_CATEGORIES.map((entry) => entry.name),
+      }),
+      textColumn('description', 'Description', (item) => item.subtitle ?? ''),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn<AdminListItem>[] = [
-    { id: 'title', header: 'Class', render: (item) => item.title },
-    { id: 'category', header: 'Category', render: (item) => item.category },
-    {
-      id: 'description',
-      header: 'Description',
-      render: (item) => item.subtitle ?? '',
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   return (
     <AdminListShell
       title="Item Classes"
       description="Fixed item classes scoped to a category (e.g. daggers under Weapons). Classes cannot be edited."
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable<AdminListItem>
+      <AdminListTable<AdminListItem>
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        features={READ_ONLY_TABLE_FEATURES}
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{ onEdit: (item) => openEntityEditor(item.id), editLabel: 'View' }}
         emptyMessage="No classes match your filters."
       />
     </AdminListShell>

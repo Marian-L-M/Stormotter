@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { textColumn } from '../../admin/adminColumnHelpers'
 import {
   CONTAINER_KIND_LABELS,
   containerKindUsesLootTable,
@@ -9,16 +11,18 @@ import {
   type ContainerListItem,
 } from '../../admin/containerTypes'
 import { isCharacterSlotDefinitionId } from '../../admin/characterSlotTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import {
+  deleteContainerRecord,
+  duplicateContainerRecord,
+} from '../../admin/entityListActions'
 import type { AdminColumn } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
 import { useContainersStore } from '../../store/containersStore'
-import { useItemsStore } from '../../store/itemsStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useItemsStore } from '../../store/itemsStore'
 
 type ManualContainerKind = Exclude<ContainerKind, 'character_slot'>
 
@@ -50,42 +54,51 @@ export function ContainersListView({ kind }: ContainersListViewProps) {
 
   const config = SECTION_CONFIG[kind]
 
-  const listItems: ContainerListItem[] = containers
-    .filter((container) => container.kind === kind)
-    .map((container) => ({
-      id: container.id,
-      title: container.name,
-      category: CONTAINER_KIND_LABELS[container.kind],
-      updatedAt: container.updatedAt,
-      subtitle: container.description || undefined,
-      container,
-    }))
+  const listItems = useMemo<ContainerListItem[]>(
+    () =>
+      containers
+        .filter((container) => container.kind === kind)
+        .map((container) => ({
+          id: container.id,
+          title: container.name,
+          category: CONTAINER_KIND_LABELS[container.kind],
+          updatedAt: container.updatedAt,
+          subtitle: container.description || undefined,
+          container,
+        })),
+    [containers, kind],
+  )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<ContainerListItem>[]>(() => {
+    const base: AdminColumn<ContainerListItem>[] = [
+      textColumn('title', 'Name', (item) => item.title, { primaryLink: true }),
+    ]
 
-  const columns: AdminColumn<ContainerListItem>[] = [
-    { id: 'title', header: 'Name', render: (item) => item.title },
-  ]
+    if (kind === 'random') {
+      base.push(
+        textColumn('loot', 'Loot entries', (item) =>
+          summarizeContainerLoot(item.container.lootEntries),
+        ),
+      )
+    } else {
+      base.push(
+        textColumn('items', 'Unique items', (item) =>
+          String(getItemsInContainer(item.container.id).length),
+        ),
+      )
+    }
 
-  if (kind === 'random') {
-    columns.push({
-      id: 'loot',
-      header: 'Loot entries',
-      render: (item) => summarizeContainerLoot(item.container.lootEntries),
-    })
-  } else {
-    columns.push({
-      id: 'items',
-      header: 'Unique items',
-      render: (item) => String(getItemsInContainer(item.container.id).length),
-    })
-  }
+    base.push(
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    )
 
-  columns.push({
-    id: 'updated',
-    header: 'Modified',
-    render: (item) => formatTimestamp(item.updatedAt),
-  })
+    return base
+  }, [kind, getItemsInContainer])
+
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   function handleAdd() {
     openEntityEditor(addContainer(kind))
@@ -97,24 +110,24 @@ export function ContainersListView({ kind }: ContainersListViewProps) {
       description={config.description}
       addLabel={config.addLabel}
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable<ContainerListItem>
+      <AdminListTable<ContainerListItem>
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        entityLabel="container"
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteContainerRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateContainerRecord(item.id)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage="No containers match your filters."
       />
     </AdminListShell>

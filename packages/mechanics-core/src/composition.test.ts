@@ -4,6 +4,7 @@ import {
   deriveMechanicKey,
   formatMechanicComposition,
   getMechanicBlocks,
+  isActiveAbilityMechanic,
   normalizeMechanicComposition,
   resolveCompositionToBinding,
 } from './composition.js'
@@ -65,6 +66,23 @@ describe('MechanicComposition', () => {
     expect(deriveMechanicKey(mechanic, 'x')).toBe('strength_modifier')
   })
 
+  it('supports derived stat modifier ids', () => {
+    const mechanic = normalizeMechanicComposition({
+      effectTypeId: 'modifier',
+      statId: 'derived_stat:armor_class',
+    })
+    expect(mechanic.statId).toBe('derived_stat:armor_class')
+    expect(formatMechanicComposition(mechanic)).toContain('Armor Class')
+  })
+
+  it('migrates legacy petrification save id to stunning', () => {
+    const mechanic = normalizeMechanicComposition({
+      effectTypeId: 'saving_throw',
+      saveTypeId: 'petrification',
+    })
+    expect(mechanic.saveTypeId).toBe('stunning')
+  })
+
   it('supports damage dice value kind with damage stacking rules', () => {
     const mechanic = normalizeMechanicComposition({
       effectTypeId: 'damage',
@@ -76,5 +94,32 @@ describe('MechanicComposition', () => {
     expect(mechanic.valueKind).toBe('dice')
     expect(mechanic.stacking).toBe('subtract')
     expect(resolveCompositionToBinding(mechanic)?.valueKind).toBe('dice')
+  })
+
+  it('includes action and target blocks for ability mechanics', () => {
+    const mechanic = normalizeMechanicComposition({
+      effectTypeId: 'damage',
+      damageTypeId: 'fire',
+      actionTypeId: 'cause',
+      targetId: 'target',
+      valueKind: 'ratio',
+      stacking: 'add',
+    })
+
+    expect(isActiveAbilityMechanic(mechanic)).toBe(true)
+    expect(formatMechanicComposition(mechanic)).toBe('Cause · Damage · Elemental · Fire · On target')
+    expect(deriveMechanicKey(mechanic, 'Fireball')).toBe('cause_fire_damage_target')
+  })
+
+  it('filters invalid action types when effect type changes', () => {
+    const mechanic = normalizeMechanicComposition({
+      effectTypeId: 'modifier',
+      statId: 'strength',
+      actionTypeId: 'cause',
+      targetId: 'self',
+    })
+
+    expect(mechanic.actionTypeId).toBeNull()
+    expect(isActiveAbilityMechanic(mechanic)).toBe(false)
   })
 })

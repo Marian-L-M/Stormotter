@@ -24,6 +24,7 @@ import { MediaPickerField } from '../../components/media/MediaPickerField'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
 import { useAudioProfilesStore } from '../../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
@@ -65,13 +66,13 @@ export function CharacterEditorView() {
   const removeMeta = useCharacterMetaStore((state) => state.removeMeta)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
   const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
+  const removeAbilityEntity = useAbilitiesStore((state) => state.removeEntity)
   const removeCharacterInventory = useContainersStore((state) => state.removeCharacterInventory)
   const clearContainerFromItems = useItemsStore((state) => state.clearContainerFromItems)
   const ensureCharacterInventory = useContainersStore((state) => state.ensureCharacterInventory)
   const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
   const audioProfiles = useAudioProfilesStore((state) => state.audioProfiles)
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
 
   if (!selectedEntityId || !item) {
     return (
@@ -104,6 +105,7 @@ export function CharacterEditorView() {
     removeMeta(character.id)
     removeTaxonomyEntity(character.id)
     removeAttributeEntity(character.id)
+    removeAbilityEntity(character.id)
     closeEntityEditor()
   }
 
@@ -348,14 +350,12 @@ export function CharacterEditorView() {
               grants.
             </p>
             <CharacterLevelAbilityFields
+              characterId={character.id}
               characterLevel={meta.level}
-              typeGrants={linkedLineageType?.levelAbilities}
-              classGrants={linkedCharacterClass?.levelAbilities}
-              characterGrants={meta.levelAbilities}
+              typeId={meta.lineageTypeId}
+              classId={meta.classId}
               typeName={linkedLineageType?.name}
               className={linkedCharacterClass?.name}
-              abilities={abilities}
-              onChange={(levelAbilities) => updateMeta(character.id, { levelAbilities })}
             />
           </>
         )

@@ -1,10 +1,10 @@
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { DiceRollInput } from '../../components/admin/DiceRollInput'
+import { EntityLevelAbilityFields } from '../../components/admin/EntityLevelAbilityFields'
 import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
-import { LevelAbilityEditor } from '../../components/admin/LevelAbilityEditor'
 import { StringListEditor } from '../../components/admin/StringListEditor'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
-import { useContentCatalogStore } from '../../store/contentCatalogStore'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
@@ -25,7 +25,7 @@ export function CharacterClassEditorView() {
   const removeCharacterClass = useCharacterClassesStore((state) => state.removeCharacterClass)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
   const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
+  const removeAbilityEntity = useAbilitiesStore((state) => state.removeEntity)
 
   if (!selectedEntityId || !characterClass) {
     return (
@@ -43,6 +43,7 @@ export function CharacterClassEditorView() {
     removeCharacterClass(characterClass.id)
     removeTaxonomyEntity(characterClass.id)
     removeAttributeEntity(characterClass.id)
+    removeAbilityEntity(characterClass.id)
     closeEntityEditor()
   }
 
@@ -99,13 +100,9 @@ export function CharacterClassEditorView() {
         addLabel="Add feature"
       />
 
-      <LevelAbilityEditor
-        label="Class abilities by level"
-        grants={characterClass.levelAbilities}
-        abilities={abilities}
-        onChange={(levelAbilities) =>
-          updateCharacterClass(characterClass.id, { levelAbilities })
-        }
+      <EntityLevelAbilityFields
+        entityId={characterClass.id}
+        entityLabel="character class"
         hint="Abilities unlock when a character of this class reaches each level."
       />
 

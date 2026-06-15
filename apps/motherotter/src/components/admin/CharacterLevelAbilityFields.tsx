@@ -1,44 +1,50 @@
 import { useMemo } from 'react'
-import type { AdminListItem } from '../../admin/types'
 import {
-  getActiveAbilityIds,
-  type LevelAbilityGrant,
-} from '../../admin/levelGrantTypes'
+  formatAbilityValue,
+  getActiveAbilityDefinitionIds,
+  sortLevelAbilityBindingGrants,
+  type LevelAbilityBindingGrant,
+} from '../../admin/abilityTypes'
+import { getItemTrigger } from '../../admin/itemTypes'
 import { normalizeCharacterLevel } from '../../admin/characterLevelTypes'
-import { LevelAbilityEditor } from './LevelAbilityEditor'
+import { EntityLevelAbilityFields } from './EntityLevelAbilityFields'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 
 interface CharacterLevelAbilityFieldsProps {
+  characterId: string
   characterLevel: number
-  typeGrants: LevelAbilityGrant[] | undefined
-  classGrants: LevelAbilityGrant[] | undefined
-  characterGrants: LevelAbilityGrant[]
+  typeId: string | null
+  classId: string | null
   typeName?: string
   className?: string
-  abilities: AdminListItem[]
-  onChange: (grants: LevelAbilityGrant[]) => void
 }
 
 export function CharacterLevelAbilityFields({
+  characterId,
   characterLevel,
-  typeGrants,
-  classGrants,
-  characterGrants,
+  typeId,
+  classId,
   typeName,
   className: linkedClassName,
-  abilities,
-  onChange,
 }: CharacterLevelAbilityFieldsProps) {
+  const definitions = useAbilitiesStore((state) => state.definitions)
+  const levelAbilityGrants = useAbilitiesStore((state) => state.levelAbilityGrants)
+
   const level = normalizeCharacterLevel(characterLevel)
+  const typeGrants = typeId ? levelAbilityGrants[typeId] : undefined
+  const classGrants = classId ? levelAbilityGrants[classId] : undefined
+  const characterGrants = levelAbilityGrants[characterId] ?? []
+
   const activeTypeIds = useMemo(
-    () => getActiveAbilityIds(typeGrants ?? [], level),
+    () => getActiveAbilityDefinitionIds(typeGrants, level),
     [typeGrants, level],
   )
   const activeClassIds = useMemo(
-    () => getActiveAbilityIds(classGrants ?? [], level),
+    () => getActiveAbilityDefinitionIds(classGrants, level),
     [classGrants, level],
   )
   const activeCharacterIds = useMemo(
-    () => getActiveAbilityIds(characterGrants, level),
+    () => getActiveAbilityDefinitionIds(characterGrants, level),
     [characterGrants, level],
   )
   const activeAllIds = useMemo(
@@ -46,9 +52,9 @@ export function CharacterLevelAbilityFields({
     [activeTypeIds, activeClassIds, activeCharacterIds],
   )
 
-  const abilityTitleById = useMemo(
-    () => new Map(abilities.map((ability) => [ability.id, ability.title])),
-    [abilities],
+  const definitionById = useMemo(
+    () => new Map(definitions.map((definition) => [definition.id, definition])),
+    [definitions],
   )
 
   return (
@@ -62,40 +68,71 @@ export function CharacterLevelAbilityFields({
           <div className="admin-hit-point-derived-row">
             <span className="admin-hit-point-derived-label">{typeName ?? 'Type'}</span>
             <span className="admin-hit-point-derived-value">
-              {formatAbilityList(activeTypeIds, abilityTitleById)}
+              {formatAbilityIdList(activeTypeIds, definitionById, typeGrants, level)}
             </span>
           </div>
           <div className="admin-hit-point-derived-row">
             <span className="admin-hit-point-derived-label">{linkedClassName ?? 'Class'}</span>
             <span className="admin-hit-point-derived-value">
-              {formatAbilityList(activeClassIds, abilityTitleById)}
+              {formatAbilityIdList(activeClassIds, definitionById, classGrants, level)}
             </span>
           </div>
           <div className="admin-hit-point-derived-row">
             <span className="admin-hit-point-derived-label">Character</span>
             <span className="admin-hit-point-derived-value">
-              {formatAbilityList(activeCharacterIds, abilityTitleById)}
+              {formatAbilityIdList(activeCharacterIds, definitionById, characterGrants, level)}
             </span>
           </div>
           <div className="admin-hit-point-derived-total">
             <span>Combined</span>
-            <strong>{formatAbilityList(activeAllIds, abilityTitleById)}</strong>
+            <strong>
+              {formatAbilityIdList(activeAllIds, definitionById, undefined, level, [
+                ...(typeGrants ?? []),
+                ...(classGrants ?? []),
+                ...characterGrants,
+              ])}
+            </strong>
           </div>
         </div>
       </fieldset>
 
-      <LevelAbilityEditor
-        label="Character abilities by level"
-        grants={characterGrants}
-        abilities={abilities}
-        onChange={onChange}
+      <EntityLevelAbilityFields
+        entityId={characterId}
+        entityLabel="character"
         hint="Character-specific abilities unlock when this character reaches each level."
       />
     </>
   )
 }
 
-function formatAbilityList(ids: string[], titleById: Map<string, string>): string {
+function formatAbilityIdList(
+  ids: string[],
+  definitionById: Map<string, import('../../admin/abilityTypes').AbilityDefinition>,
+  grants: LevelAbilityBindingGrant[] | undefined,
+  level: number,
+  allGrants?: LevelAbilityBindingGrant[],
+): string {
   if (ids.length === 0) return '—'
-  return ids.map((id) => titleById.get(id) ?? id).join(', ')
+
+  const grantSources = allGrants ?? grants ?? []
+  const sorted = sortLevelAbilityBindingGrants(grantSources)
+
+  return ids
+    .map((id) => {
+      const definition = definitionById.get(id)
+      const name = definition?.name ?? id
+      let binding: import('../../admin/abilityTypes').AbilityBinding | undefined
+      for (const grant of sorted) {
+        if (grant.level <= level && grant.definitionIds.includes(id)) {
+          binding = grant.bindings[id]
+        }
+      }
+      if (!binding || !definition) return name
+      const valueLabel = formatAbilityValue(definition.inputType, binding.value)
+      const triggerLabel = binding.triggerId
+        ? getItemTrigger(binding.triggerId)?.label ?? binding.triggerId
+        : null
+      return triggerLabel ? `${name} (${valueLabel} @ ${triggerLabel})` : `${name} (${valueLabel})`
+    })
+    .join(', ')
 }

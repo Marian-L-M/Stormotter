@@ -14,6 +14,7 @@ import {
 import { LINEAGE_STAT_LABELS } from '../../admin/lineageTypes'
 import { resolveDerivedStats } from '../../admin/derivedStatResolver'
 import type { CharacterMeta } from '../../store/characterMetaStore'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
 import { useContainersStore } from '../../store/containersStore'
 import { useItemsStore } from '../../store/itemsStore'
@@ -57,6 +58,8 @@ function DerivedStatBreakdownRows({ characterId, meta, linkedLineageType, linked
   const definitions = useAttributesStore((state) => state.definitions)
   const entityValues = useAttributesStore((state) => state.entityValues)
   const levelAttributeGrants = useAttributesStore((state) => state.levelAttributeGrants)
+  const abilityDefinitions = useAbilitiesStore((state) => state.definitions)
+  const levelAbilityGrants = useAbilitiesStore((state) => state.levelAbilityGrants)
   const containers = useContainersStore((state) => state.containers)
   const items = useItemsStore((state) => state.items)
 
@@ -70,6 +73,8 @@ function DerivedStatBreakdownRows({ characterId, meta, linkedLineageType, linked
         attributeDefinitions: definitions,
         entityValues,
         levelAttributeGrants,
+        abilityDefinitions,
+        levelAbilityGrants,
         containers,
         items,
       }),
@@ -81,6 +86,8 @@ function DerivedStatBreakdownRows({ characterId, meta, linkedLineageType, linked
       definitions,
       entityValues,
       levelAttributeGrants,
+      abilityDefinitions,
+      levelAbilityGrants,
       containers,
       items,
     ],
@@ -187,8 +194,8 @@ export function CharacterDerivedStatsPanel({
             ))}
           </ul>
           <p className="field-hint">
-            Attribute bonuses use Magic handler <code>derived_stat:&lt;key&gt;</code> or Saving Throw
-            attributes for spell/breath/death/stunning/polymorph/charisma/luck saves.
+            Attribute bonuses use Modifier <code>derived_stat:&lt;key&gt;</code>, Magic effects that map
+            to derived stats, or Saving Throw attributes (fortitude, reflex, will, spell, etc.).
           </p>
         </details>
       </fieldset>

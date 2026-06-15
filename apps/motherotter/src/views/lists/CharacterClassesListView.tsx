@@ -1,20 +1,25 @@
 import { useMemo } from 'react'
+import { textColumn } from '../../admin/adminColumnHelpers'
 import type { CharacterClassListItem } from '../../admin/characterClassTypes'
+import {
+  deleteCharacterClassRecord,
+  duplicateCharacterClassRecord,
+} from '../../admin/entityListActions'
 import { formatDiceRoll } from '../../admin/diceTypes'
-import { summarizeLevelAbilityGrants } from '../../admin/levelGrantTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import { summarizeLevelAbilityBindingGrants } from '../../admin/abilityTypes'
 import type { AdminColumn } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
-import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
+import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
 
 export function CharacterClassesListView() {
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
+  const levelAbilityGrants = useAbilitiesStore((state) => state.levelAbilityGrants)
   const addCharacterClass = useCharacterClassesStore((state) => state.addCharacterClass)
   const openEntityEditor = useEditorStore((state) => state.openEntityEditor)
 
@@ -31,41 +36,27 @@ export function CharacterClassesListView() {
     [characterClasses],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<CharacterClassListItem>[]>(
+    () => [
+      textColumn('title', 'Class', (item) => item.title, { primaryLink: true }),
+      textColumn('hitDice', 'Hit dice', (item) => formatDiceRoll(item.characterClass.hitDice)),
+      textColumn('features', 'Features', (item) => item.category),
+      textColumn('categories', 'Categories', (item) =>
+        getTaxonomySummaryForEntity('character-classes', item.id).categories,
+      ),
+      textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity('character-classes', item.id).tags),
+      textColumn('abilities', 'Abilities', (item) =>
+        summarizeLevelAbilityBindingGrants(levelAbilityGrants[item.id] ?? []),
+      ),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [levelAbilityGrants],
+  )
 
-  const columns: AdminColumn<CharacterClassListItem>[] = [
-    { id: 'title', header: 'Class', render: (item) => item.title },
-    {
-      id: 'hitDice',
-      header: 'Hit dice',
-      render: (item) => formatDiceRoll(item.characterClass.hitDice),
-    },
-    {
-      id: 'features',
-      header: 'Features',
-      render: (item) => item.category,
-    },
-    {
-      id: 'categories',
-      header: 'Categories',
-      render: (item) => getTaxonomySummaryForEntity('character-classes', item.id).categories,
-    },
-    {
-      id: 'tags',
-      header: 'Tags',
-      render: (item) => getTaxonomySummaryForEntity('character-classes', item.id).tags,
-    },
-    {
-      id: 'abilities',
-      header: 'Abilities',
-      render: (item) => summarizeLevelAbilityGrants(item.characterClass.levelAbilities),
-    },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   function handleAdd() {
     openEntityEditor(addCharacterClass())
@@ -77,24 +68,24 @@ export function CharacterClassesListView() {
       description="Define jobs and roles with distinct traits, abilities, categories, and tags."
       addLabel="Add Character Class"
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
+        items={listItems}
+        table={table}
+        entityLabel="character class"
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{
+          onEdit: (item) => openEntityEditor(item.id),
+          onDelete: (item) => deleteCharacterClassRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateCharacterClassRecord(item.id)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage='No character classes yet. Click "Add Character Class" to define one.'
       />
     </AdminListShell>

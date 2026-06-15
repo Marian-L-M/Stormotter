@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
-import { formatTimestamp } from '../../lib/format'
-import { useAdminList } from '../../admin/useAdminList'
-import type { AdminListItem } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
+import { categoryColumn, textColumn } from '../../admin/adminColumnHelpers'
+import { READ_ONLY_TABLE_FEATURES } from '../../admin/entityListActions'
+import type { AdminColumn, AdminListItem } from '../../admin/types'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
-import type { AdminColumn } from '../../admin/types'
+import { formatTimestamp } from '../../lib/format'
 import { useEditorStore } from '../../store/editorStore'
 
 export function MapsListView() {
@@ -29,25 +28,22 @@ export function MapsListView() {
     [mapId, title, world, lastSavedAt],
   )
 
-  const list = useAdminList({
-    items,
-    categories: ['Single layer', 'Multi-layer'],
-  })
+  const columns = useMemo<AdminColumn<AdminListItem>[]>(
+    () => [
+      textColumn('title', 'Map', (item) => item.title, { primaryLink: true }),
+      categoryColumn('category', 'Type', (item) => item.category, {
+        getCategoryOptions: () => ['Single layer', 'Multi-layer'],
+      }),
+      textColumn('size', 'Size', (item) => item.subtitle ?? '—'),
+      textColumn('updated', 'Last modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn[] = [
-    { id: 'title', header: 'Map', render: (item) => item.title },
-    { id: 'category', header: 'Type', render: (item) => item.category },
-    {
-      id: 'size',
-      header: 'Size',
-      render: (item) => item.subtitle ?? '—',
-    },
-    {
-      id: 'updated',
-      header: 'Last modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items, columns })
 
   return (
     <AdminListShell
@@ -55,24 +51,17 @@ export function MapsListView() {
       description="All maps in the active project. Open a map to place tiles and entities."
       addLabel="Add Map"
       onAdd={() => openEntityEditor(mapId)}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
+        items={items}
+        table={table}
+        features={READ_ONLY_TABLE_FEATURES}
         onRowClick={(item) => openEntityEditor(item.id)}
+        rowActions={{ onEdit: (item) => openEntityEditor(item.id) }}
       />
     </AdminListShell>
   )

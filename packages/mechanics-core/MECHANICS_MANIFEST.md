@@ -18,7 +18,7 @@ Top-level blocks in the attribute builder. Each maps to an auto-assigned **categ
 | `damage` | Damage | Percentile |
 | `resistance` | Resistance | Percentile |
 | `modifier` | Modifier | Number |
-| `condition` | Condition | Boolean |
+| `condition` | Trait | Boolean |
 | `saving_throw` | Saving Throw | Number |
 | `magic` | Magic | Number |
 
@@ -109,6 +109,8 @@ Used with Damage / Resistance attribute types.
 
 ## Stats (modifiers)
 
+Ability scores:
+
 | ID | Display name |
 |----|--------------|
 | `strength` | Strength |
@@ -116,8 +118,11 @@ Used with Damage / Resistance attribute types.
 | `constitution` | Constitution |
 | `intelligence` | Intelligence |
 | `wisdom` | Wisdom |
+| `perception` | Perception |
 | `charisma` | Charisma |
 | `luck` | Luck |
+
+Derived stats use the prefix `derived_stat:` on the modifier axis (e.g. `derived_stat:armor_class`).
 
 ---
 
@@ -125,48 +130,71 @@ Used with Damage / Resistance attribute types.
 
 | ID | Display name |
 |----|--------------|
+| `fortitude` | Fortitude |
+| `reflex` | Reflex |
+| `will` | Will |
 | `spell` | Spell |
 | `breath` | Breath weapon |
 | `death` | Death magic |
-| `petrification` | Petrification |
+| `stunning` | Stunning |
 | `polymorph` | Polymorph |
+| `charisma` | Charisma |
+| `luck` | Luck |
+
+Legacy `petrification` migrates to `stunning`.
 
 ---
 
-## Conditions
+## Traits (condition axis)
 
-Status attributes (boolean). Overlaps in naming with damage subtypes are intentional — different mechanic axes.
+Permanent passive traits — not temporary combat states.
 
-| ID | Display name | Status |
-|----|--------------|--------|
-| `stunned` | Stunned | Active |
-| `poisoned` | Poisoned | Active |
-| `bleeding` | Bleeding | Active |
-| `feared` | Feared | Active |
-| `charmed` | Charmed | Active |
-| `invisible` | Invisible | Active |
-| `paralyzed` | Paralyzed | Planned |
-| `sleeping` | Sleeping | Planned |
-| `petrified` | Petrified | Planned |
-| `incapacitated` | Incapacitated | Planned |
+| ID | Display name | Notes |
+|----|--------------|-------|
+| `regeneration` | Regeneration | Trait only — use attribute value for HP/round rate |
+| `lifesteal` | Lifesteal | |
+| `damage_reflection` | Damage reflection | |
+| `spell_immunity` | Spell immunity | |
+| `disease_immunity` | Disease immunity | |
+| `poison_immunity` | Poison immunity | |
+| `undead` | Undead | |
+| `incorporeal` | Incorporeal | |
+| `darkvision` | Darkvision | |
+| `water_breathing` | Water breathing | |
+| `silent_casting` | Silent casting | |
+| `silent_movement` | Silent movement | |
+
+Samples: `apps/motherotter/src/admin/sampleAttributeTemplates.ts`
 
 ---
 
 ## Magic effects
 
-Used with the **Magic** attribute type (not magical damage subtypes).
+| ID | Display name | Derived stat |
+|----|--------------|--------------|
+| `spell_power` | Spell power | `spell_power` |
+| `divine_power` | Divine power | `divine_power` |
+| `magic_resistance` | Magic resistance | `magic_resistance` |
+| `magic_spell` | Magic spell | — |
+| `magic_spell_slots` | Arcane spell slots | `magic_spell_slots` |
+| `divine_spell_slots` | Divine spell slots | `divine_spell_slots` |
+| `restore_magic_slots` | Restore arcane spell slots | — |
+| `restore_divine_spell_slots` | Restore divine spell slots | — |
+| `casting_time_mod` | Casting time modifier | `casting_time_mod` |
+| `casting_interval` | Casting interval | `casting_interval` |
+| `thorns_aura` | Thorns aura | — |
+| `healing_aura` | Healing aura | — |
+| `protection_aura` | Protection aura | — |
+| `fear_aura` | Fear aura | — |
+| `fire_aura` | Fire aura | — |
+| `frost_aura` | Frost aura | — |
+| `holy_aura` | Holy aura | — |
+| `poison_aura` | Poison aura | — |
+| `antimagic_aura` | Antimagic aura | — |
+| `spell_reflect` | Spell reflection | — |
+| `dispel` | Dispel magic | — |
 
-| ID | Display name | Status |
-|----|--------------|--------|
-| `spell_power` | Spell power | Active |
-| `magic_resistance` | Magic resistance | Active |
-| `thorns_aura` | Thorns aura | Active |
-| `regeneration` | Regeneration | Active |
-| `spell_reflect` | Spell reflection | Active |
-| `dispel` | Dispel magic | Active |
-| `spell_slots` | Spell slots / uses | Planned |
-| `cast_speed` | Casting speed | Planned |
-| `summon_power` | Summoning strength | Planned |
+Casting rework notes: `CASTING_SYSTEM_NOTES` in `apps/motherotter/src/admin/derivedStatTypes.ts`.
 
 ---
 
@@ -180,6 +208,7 @@ Used with the **Magic** attribute type (not magical damage subtypes).
 | `stat` (attribute type) | `modifier` |
 | `save` (attribute type) | `saving_throw` |
 | `custom` (attribute type) | `magic` |
+| `petrification` (save) | `stunning` |
 
 ---
 
@@ -191,3 +220,4 @@ Used with the **Magic** attribute type (not magical damage subtypes).
 | 2026-06-07 | Physical: +ranged_piercing, ranged_crushing, ranged_slashing, finesse, bleeding. |
 | 2026-06-07 | Elemental: +sonic, impact, vitality. |
 | 2026-06-07 | Magical: +divine, demonic, necrotic, chaotic, heroic, void, pure. |
+| 2026-06-07 | Traits replace combat conditions; saves aligned with derived stats; modifier supports `derived_stat:*`; casting magic effects added. |

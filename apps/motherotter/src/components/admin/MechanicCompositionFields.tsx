@@ -6,6 +6,7 @@ import {
   getMechanicBlocks,
   getAttributeCategoryName,
   isActiveMechanic,
+  isActiveAbilityMechanic,
   type AttributeDefinition,
   type AttributeDefinitionPatch,
   type MechanicBuilderApplyResult,
@@ -13,19 +14,44 @@ import {
 import { MechanicBuilderModal } from './MechanicBuilderModal'
 import { useAttributesStore } from '../../store/attributesStore'
 
-interface MechanicCompositionFieldsProps {
-  definition: AttributeDefinition
-  onChange: (patch: AttributeDefinitionPatch) => void
+interface MechanicDefinitionShape {
+  id: string
+  name: string
+  inputType: AttributeDefinition['inputType']
+  categoryId: string | null
+  mechanic: AttributeDefinition['mechanic']
+  updatedAt: string
 }
 
-export function MechanicCompositionFields({ definition, onChange }: MechanicCompositionFieldsProps) {
+interface MechanicCompositionFieldsProps {
+  definition: MechanicDefinitionShape
+  onChange: (patch: AttributeDefinitionPatch) => void
+  categories?: Array<{ id: string; name: string }>
+  getCategoryName?: (categoryId: string | null, categories: Array<{ id: string; name: string }>) => string
+  entityLabel?: string
+  builderMode?: 'attribute' | 'ability'
+}
+
+export function MechanicCompositionFields({
+  definition,
+  onChange,
+  categories: categoriesProp,
+  getCategoryName,
+  entityLabel = 'attribute',
+  builderMode = 'attribute',
+}: MechanicCompositionFieldsProps) {
   const [modalOpen, setModalOpen] = useState(false)
-  const categories = useAttributesStore((state) => state.categories)
+  const attributeCategories = useAttributesStore((state) => state.categories)
+  const categories = categoriesProp ?? attributeCategories
+  const categoryName = getCategoryName
+    ? getCategoryName(definition.categoryId, categories)
+    : getAttributeCategoryName(definition.categoryId, categories)
   const mechanic = definition.mechanic ?? createEmptyMechanic()
   const preview = formatMechanicComposition(mechanic)
   const blocks = getMechanicBlocks(mechanic)
-  const hasMechanic = isActiveMechanic(mechanic)
-  const categoryName = getAttributeCategoryName(definition.categoryId, categories)
+  const hasMechanic = builderMode === 'ability'
+    ? isActiveAbilityMechanic(mechanic)
+    : isActiveMechanic(mechanic)
 
   function applyBuilderResult(result: MechanicBuilderApplyResult | null) {
     if (!result) {
@@ -44,8 +70,8 @@ export function MechanicCompositionFields({ definition, onChange }: MechanicComp
       <fieldset className="admin-fieldset">
         <legend>Mechanic</legend>
         <p className="field-hint admin-attribute-hint">
-          Build the attribute in the block composer. Category, input type, and engine key are derived
-          from the composed blocks.
+          Build the {entityLabel} in the block composer. Category, input type, and engine key are
+          derived from the composed blocks.
         </p>
 
         {hasMechanic ? (
@@ -97,6 +123,7 @@ export function MechanicCompositionFields({ definition, onChange }: MechanicComp
           attributeName={definition.name}
           mechanic={definition.mechanic}
           inputType={definition.inputType}
+          builderMode={builderMode}
           onClose={() => setModalOpen(false)}
           onApply={applyBuilderResult}
         />

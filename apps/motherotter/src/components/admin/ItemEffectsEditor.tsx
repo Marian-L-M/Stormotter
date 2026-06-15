@@ -7,7 +7,7 @@ import {
   type ItemEffectApplicationMode,
   type ItemTriggerId,
 } from '../../admin/itemTypes'
-import { useContentCatalogStore } from '../../store/contentCatalogStore'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 
 interface ItemEffectsEditorProps {
   effects: ItemEffect[]
@@ -17,7 +17,7 @@ interface ItemEffectsEditorProps {
 const triggerGroups = itemTriggersByGroup()
 
 export function ItemEffectsEditor({ effects, onChange }: ItemEffectsEditorProps) {
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
+  const abilities = useAbilitiesStore((state) => state.definitions)
 
   function updateEffect(id: string, patch: Partial<ItemEffect>) {
     onChange(
@@ -109,7 +109,7 @@ export function ItemEffectsEditor({ effects, onChange }: ItemEffectsEditorProps)
                   <option value="">None</option>
                   {abilities.map((ability) => (
                     <option key={ability.id} value={ability.id}>
-                      {ability.title}
+                      {ability.name}
                     </option>
                   ))}
                 </select>

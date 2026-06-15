@@ -15,6 +15,10 @@ export const DERIVED_STAT_KEYS = [
   'carry_weight',
   'spell_power',
   'divine_power',
+  'magic_spell_slots',
+  'divine_spell_slots',
+  'casting_time_mod',
+  'casting_interval',
   'mental_fortitude',
   'analysis',
   'empathy',
@@ -57,6 +61,10 @@ export const DERIVED_STAT_LABELS: Record<DerivedStatKey, string> = {
   carry_weight: 'Carry Weight',
   spell_power: 'Spell Power',
   divine_power: 'Divine Power',
+  magic_spell_slots: 'Arcane Spell Slots',
+  divine_spell_slots: 'Divine Spell Slots',
+  casting_time_mod: 'Casting Time Modifier',
+  casting_interval: 'Casting Interval',
   mental_fortitude: 'Mental Fortitude',
   analysis: 'Analysis',
   empathy: 'Empathy',
@@ -89,6 +97,10 @@ export const DERIVED_STAT_HINTS: Record<DerivedStatKey, string> = {
   carry_weight: 'Maximum encumbrance in weight units (strength-based).',
   spell_power: 'Arcane spell potency and spell DC (intelligence-based).',
   divine_power: 'Divine spell potency and miracle DC (wisdom-based).',
+  magic_spell_slots: 'Prepared or memorized arcane spells available per rest.',
+  divine_spell_slots: 'Prepared or granted divine spells available per rest.',
+  casting_time_mod: 'Flat modifier to spell casting time (negative = faster).',
+  casting_interval: 'Minimum seconds between spell casts (cooldown floor).',
   mental_fortitude: 'Resist mental stress and manipulation (wisdom and charisma).',
   analysis: 'Deduction, puzzles, and logical reasoning (perception and intelligence).',
   empathy: 'Read motives and emotional cues (perception and charisma).',
@@ -121,16 +133,28 @@ export type DerivedStatStatContribution = 'modifier' | 'score_multiplier' | null
 
 export type DerivedStatStatCombination = 'single' | 'sum_modifiers' | 'max_modifier'
 
-/** Maps special save derived stats to mechanics-core save type ids for attribute save_bonus stacking. */
+/** Maps save derived stats to mechanics-core save type ids for attribute save_bonus stacking. */
 export const DERIVED_STAT_SAVE_TYPE_IDS: Partial<Record<DerivedStatKey, string>> = {
+  save_fortitude: 'fortitude',
+  save_reflex: 'reflex',
+  save_will: 'will',
   save_spell: 'spell',
   save_breath: 'breath',
   save_death: 'death',
-  save_stunning: 'petrification',
+  save_stunning: 'stunning',
   save_polymorph: 'polymorph',
   save_charisma: 'charisma',
   save_luck: 'luck',
 }
+
+/** How magic/casting effects relate to derived stats and future runtime work. */
+export const CASTING_SYSTEM_NOTES = [
+  'Arcane and divine spell slots should be separate derived stats (magic_spell_slots, divine_spell_slots) with class/type base values and item modifiers.',
+  'Casting time modifier stacks additively; runtime converts base spell cast time + modifier into final action cost.',
+  'Casting interval is a derived stat floor on how often a caster can begin a new spell (distinct from per-spell cooldowns).',
+  'Silent casting is a boolean Trait — not a numeric derived stat — and should suppress verbal component checks.',
+  'Spell slot consumption, preparation lists, and interval timers belong in a future CastingState layer (per-character battle/story state).',
+] as const
 
 export interface DerivedStatDefinition {
   key: DerivedStatKey
@@ -267,6 +291,42 @@ export const DERIVED_STAT_DEFINITIONS: DerivedStatDefinition[] = [
     linkedStats: ['wisdom'],
     statCombination: 'single',
     statContribution: 'modifier',
+    scoreMultiplier: 1,
+  },
+  {
+    key: 'magic_spell_slots',
+    group: 'utility',
+    defaultBase: 0,
+    linkedStats: [],
+    statCombination: 'single',
+    statContribution: null,
+    scoreMultiplier: 1,
+  },
+  {
+    key: 'divine_spell_slots',
+    group: 'utility',
+    defaultBase: 0,
+    linkedStats: [],
+    statCombination: 'single',
+    statContribution: null,
+    scoreMultiplier: 1,
+  },
+  {
+    key: 'casting_time_mod',
+    group: 'utility',
+    defaultBase: 0,
+    linkedStats: [],
+    statCombination: 'single',
+    statContribution: null,
+    scoreMultiplier: 1,
+  },
+  {
+    key: 'casting_interval',
+    group: 'utility',
+    defaultBase: 0,
+    linkedStats: [],
+    statCombination: 'single',
+    statContribution: null,
     scoreMultiplier: 1,
   },
   {

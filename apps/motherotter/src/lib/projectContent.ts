@@ -14,12 +14,14 @@ import {
 import { createDefaultHitDice, createEmptyBonusDice, normalizeDiceRoll, normalizeHitPointOverride, normalizeHitPointSource } from '../admin/diceTypes'
 import { normalizeCharacterLevel } from '../admin/characterLevelTypes'
 import { normalizeLevelAbilityGrants } from '../admin/levelGrantTypes'
+import { normalizeAbilitiesContent } from '../admin/abilityTypes'
 import { normalizeAttributesContent } from '../admin/attributeTypes'
 import { migrateStubToItem, normalizeItem } from '../admin/itemTypes'
 import { migrateStubToContainer, migrateLegacyContainers, normalizeContainer } from '../admin/containerTypes'
 import { normalizeAudioProfile } from '../admin/audioProfileTypes'
 import { normalizeTaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem, StubContentType } from '../admin/types'
+import { useAbilitiesStore } from '../store/abilitiesStore'
 import { useAttributesStore } from '../store/attributesStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
@@ -182,6 +184,31 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
   catalogStubs.items = []
   catalogStubs.containers = []
 
+  const legacyAbilityStubs = catalogStubs.abilities
+  catalogStubs.abilities = []
+
+  const legacyLevelGrantsByEntity: Record<string, ReturnType<typeof normalizeLevelAbilityGrants>> = {}
+  for (const entry of characterTypes) {
+    if (entry.levelAbilities.length > 0) {
+      legacyLevelGrantsByEntity[entry.id] = entry.levelAbilities
+    }
+  }
+  for (const entry of characterClasses) {
+    if (entry.levelAbilities.length > 0) {
+      legacyLevelGrantsByEntity[entry.id] = entry.levelAbilities
+    }
+  }
+  for (const character of raw.characters ?? defaults.characters) {
+    const migrated = migrateCharacter(character)
+    if (migrated.levelAbilities.length > 0) {
+      legacyLevelGrantsByEntity[migrated.id] = migrated.levelAbilities
+    }
+  }
+  const abilities = normalizeAbilitiesContent(raw.abilities ?? defaults.abilities, {
+    legacyStubAbilities: legacyAbilityStubs,
+    legacyLevelGrantsByEntity,
+  })
+
   return {
     stateVariables: structuredClone(raw.stateVariables ?? defaults.stateVariables),
     characterTypes: structuredClone(characterTypes),
@@ -197,6 +224,7 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
         ...items.map((entry) => entry.id),
       ]),
     }),
+    abilities,
     items: structuredClone(items),
     containers: structuredClone(containers),
     characters: structuredClone((raw.characters ?? defaults.characters).map(migrateCharacter)),
@@ -216,6 +244,7 @@ export function getProjectContent(): ProjectContent {
   const mediaAssets = useMediaLibraryStore.getState().assets
   const audioProfiles = useAudioProfilesStore.getState().audioProfiles
   const attributes = useAttributesStore.getState().getSnapshot()
+  const abilities = useAbilitiesStore.getState().getSnapshot()
   const items = useItemsStore.getState().items
   const containers = useContainersStore.getState().containers
   const characters = useContentCatalogStore.getState().stubs.characters
@@ -227,7 +256,7 @@ export function getProjectContent(): ProjectContent {
     stories: structuredClone(stubs.stories),
     items: structuredClone(stubs.items),
     containers: structuredClone(stubs.containers),
-    abilities: structuredClone(stubs.abilities),
+    abilities: [],
     rules: structuredClone(stubs.rules),
   }
 
@@ -238,6 +267,7 @@ export function getProjectContent(): ProjectContent {
     mediaAssets: structuredClone(mediaAssets),
     audioProfiles: structuredClone(audioProfiles),
     attributes: structuredClone(attributes),
+    abilities: structuredClone(abilities),
     items: structuredClone(items),
     containers: structuredClone(containers),
     characters: characters.map((character) => ({
@@ -287,6 +317,7 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
   useMediaLibraryStore.getState().replaceAll(content.mediaAssets)
   useAudioProfilesStore.getState().replaceAll(content.audioProfiles)
   useAttributesStore.getState().replaceAll(content.attributes)
+  useAbilitiesStore.getState().replaceAll(content.abilities)
   useItemsStore.getState().replaceAll(content.items)
   useContainersStore.getState().replaceAll(content.containers)
   useContainersStore.getState().syncAllCharacterInventories(

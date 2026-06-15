@@ -4,6 +4,7 @@ import type { CharacterLineageType } from '../admin/lineageTypes'
 import { createDefaultStatRanges, createEmptyCharacterStats } from '../admin/lineageTypes'
 import { createDefaultHitDice, createEmptyBonusDice } from '../admin/diceTypes'
 import { DEFAULT_CHARACTER_LEVEL } from '../admin/characterLevelTypes'
+import { createEmptyAbilitiesContent } from '../admin/abilityTypes'
 import { createEmptyAttributesContent } from '../admin/attributeTypes'
 import { createEmptyItem } from '../admin/itemTypes'
 import { createEmptyContainer } from '../admin/containerTypes'
@@ -198,6 +199,7 @@ export function createDefaultProjectContent(): ProjectContent {
     mediaAssets: [],
     audioProfiles: [],
     attributes: createEmptyAttributesContent(),
+    abilities: createEmptyAbilitiesContent(),
     items: defaultItems(),
     containers: defaultContainers(),
     characters: defaultCharacters(),

@@ -89,6 +89,7 @@ interface AttributesState extends AttributesContent {
   assignLevelAttribute: (entityId: string, level: number, definitionId: string) => boolean
   unassignLevelAttribute: (entityId: string, level: number, definitionId: string) => void
   removeEntity: (entityId: string) => void
+  copyEntityAttributes: (fromEntityId: string, toEntityId: string) => void
   replaceAll: (content: AttributesContent) => void
   getSnapshot: () => AttributesContent
 }
@@ -402,6 +403,23 @@ export const useAttributesStore = create<AttributesState>()(
         delete state.entityValues[entityId]
         delete state.customAssignments[entityId]
         delete state.levelAttributeGrants[entityId]
+      })
+    },
+
+    copyEntityAttributes: (fromEntityId, toEntityId) => {
+      set((state) => {
+        const entityValues = state.entityValues[fromEntityId]
+        if (entityValues) {
+          state.entityValues[toEntityId] = structuredClone(entityValues)
+        }
+        const customAssignments = state.customAssignments[fromEntityId]
+        if (customAssignments) {
+          state.customAssignments[toEntityId] = [...customAssignments]
+        }
+        const grants = state.levelAttributeGrants[fromEntityId]
+        if (grants) {
+          state.levelAttributeGrants[toEntityId] = structuredClone(grants)
+        }
       })
     },
 

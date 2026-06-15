@@ -1,5 +1,6 @@
 import type { Container } from '../admin/containerTypes'
 import type { Item } from '../admin/itemTypes'
+import type { AbilitiesContent } from '../admin/abilityTypes'
 import type { AttributesContent } from '../admin/attributeTypes'
 import type { AudioProfile } from '../admin/audioProfileTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
@@ -56,6 +57,7 @@ export interface ProjectContent {
   mediaAssets: MediaAsset[]
   audioProfiles: AudioProfile[]
   attributes: AttributesContent
+  abilities: AbilitiesContent
   items: Item[]
   containers: Container[]
   characters: SerializedCharacter[]

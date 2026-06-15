@@ -1,21 +1,24 @@
 import { useMemo } from 'react'
+import { categoryColumn, textColumn } from '../../admin/adminColumnHelpers'
 import type { CharacterCategory } from '../../admin/characterTypes'
+import {
+  deleteCharacterRecord,
+  duplicateCharacterRecord,
+} from '../../admin/entityListActions'
 import { formatStatRangesSummary } from '../../admin/lineageTypes'
-import { useAdminList } from '../../admin/useAdminList'
-import { filterCharactersByType } from '../../lib/projectContent'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
-import { AdminListShell } from '../../components/admin/AdminListShell'
-import { AdminPagination } from '../../components/admin/AdminPagination'
 import type { AdminColumn, AdminListItem } from '../../admin/types'
+import { filterCharactersByType } from '../../lib/projectContent'
+import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
+import { AdminPagination } from '../../components/admin/AdminPagination'
 import { formatTimestamp } from '../../lib/format'
+import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useCharacterMetaStore } from '../../store/characterMetaStore'
 import { useContainersStore } from '../../store/containersStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
-import { useCharacterClassesStore } from '../../store/characterClassesStore'
+import { useEditorStore } from '../../store/editorStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { getTaxonomySummaryForEntity } from '../../store/taxonomyStore'
-import { useEditorStore } from '../../store/editorStore'
 
 interface CharactersListViewProps {
   characterType: CharacterCategory
@@ -36,60 +39,42 @@ export function CharactersListView({ characterType }: CharactersListViewProps) {
     [allItems, metaByCharacterId, characterType],
   )
 
-  const list = useAdminList({ items })
-
-  const columns: AdminColumn[] = [
-    { id: 'title', header: 'Title', render: (item) => item.title },
-    {
-      id: 'categories',
-      header: 'Categories',
-      render: (item) => getTaxonomySummaryForEntity('characters', item.id).categories,
-    },
-    {
-      id: 'tags',
-      header: 'Tags',
-      render: (item) => getTaxonomySummaryForEntity('characters', item.id).tags,
-    },
-    {
-      id: 'lineage-type',
-      header: 'Type',
-      render: (item) => {
+  const columns = useMemo<AdminColumn<AdminListItem>[]>(
+    () => [
+      textColumn('title', 'Title', (item) => item.title, { primaryLink: true }),
+      textColumn('categories', 'Categories', (item) =>
+        getTaxonomySummaryForEntity('characters', item.id).categories,
+      ),
+      textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity('characters', item.id).tags),
+      categoryColumn('lineage-type', 'Type', (item) => {
         const lineageTypeId = metaByCharacterId[item.id]?.lineageTypeId
         if (!lineageTypeId) return '—'
         return lineageTypes.find((entry) => entry.id === lineageTypeId)?.name ?? lineageTypeId
-      },
-    },
-    {
-      id: 'lineage-ranges',
-      header: 'Type ranges',
-      render: (item) => {
+      }),
+      textColumn('lineage-ranges', 'Type ranges', (item) => {
         const lineageTypeId = metaByCharacterId[item.id]?.lineageTypeId
         if (!lineageTypeId) return '—'
         const lineageType = lineageTypes.find((entry) => entry.id === lineageTypeId)
         if (!lineageType) return '—'
         return formatStatRangesSummary(lineageType.statRanges)
-      },
-    },
-    {
-      id: 'class',
-      header: 'Class',
-      render: (item) => {
+      }),
+      categoryColumn('class', 'Class', (item) => {
         const classId = metaByCharacterId[item.id]?.classId
         if (!classId) return '—'
         return characterClasses.find((entry) => entry.id === classId)?.name ?? classId
-      },
-    },
-    {
-      id: 'level',
-      header: 'Level',
-      render: (item) => metaByCharacterId[item.id]?.level ?? 1,
-    },
-    {
-      id: 'updated',
-      header: 'Last modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+      }),
+      textColumn('level', 'Level', (item) => String(metaByCharacterId[item.id]?.level ?? 1), {
+        sortValue: (item) => metaByCharacterId[item.id]?.level ?? 1,
+      }),
+      textColumn('updated', 'Last modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [metaByCharacterId, lineageTypes, characterClasses],
+  )
+
+  const { table } = useAdminListTable({ items, columns })
 
   function handleAdd() {
     const id = addItem('characters', characterType)
@@ -112,24 +97,24 @@ export function CharactersListView({ characterType }: CharactersListViewProps) {
       description="Character definitions grouped by type. Assign categories and tags in the editor."
       addLabel="Add Character"
       onAdd={handleAdd}
-      filters={
-        <AdminFilterBar
-          search={list.search}
-          onSearchChange={list.setSearch}
-          category={list.category}
-          onCategoryChange={list.setCategory}
-          categoryOptions={list.categoryOptions}
-          resultCount={list.totalItems}
-        />
-      }
       pagination={
-        <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+        <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
       }
     >
-      <AdminDataTable
+      <AdminListTable
         columns={columns}
-        items={list.pageItems}
+        items={items}
+        table={table}
+        entityLabel="character"
         onRowClick={handleRowClick}
+        rowActions={{
+          onEdit: handleRowClick,
+          onDelete: (item) => deleteCharacterRecord(item.id),
+          onDuplicate: (item) => {
+            const newId = duplicateCharacterRecord(item.id, characterType)
+            openEntityEditor(newId)
+          },
+        }}
         emptyMessage='No characters in this group yet. Click "Add Character" to create one.'
       />
     </AdminListShell>

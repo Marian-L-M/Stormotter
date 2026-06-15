@@ -6,11 +6,14 @@ import {
   formatMechanicComposition,
   getAttributeCategoryName,
 } from '../../admin/attributeTypes'
-import { useAdminList } from '../../admin/useAdminList'
+import { categoryColumn, textColumn } from '../../admin/adminColumnHelpers'
+import {
+  deleteAttributeDefinitionRecord,
+  duplicateAttributeDefinitionRecord,
+} from '../../admin/entityListActions'
 import type { AdminColumn, AdminListItem } from '../../admin/types'
-import { AdminDataTable } from '../../components/admin/AdminDataTable'
-import { AdminFilterBar } from '../../components/admin/AdminFilterBar'
 import { AdminListShell } from '../../components/admin/AdminListShell'
+import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
 import { AdminPagination } from '../../components/admin/AdminPagination'
 import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
 import { AttributeCategoriesPanel } from '../../components/admin/AttributeCategoriesPanel'
@@ -57,20 +60,22 @@ export function AttributesListView() {
     [definitions, categories, attributeSourceTab],
   )
 
-  const list = useAdminList({ items: listItems })
+  const columns = useMemo<AdminColumn<AttributeListItem>[]>(
+    () => [
+      textColumn('title', 'Attribute', (item) => item.title, { primaryLink: true }),
+      textColumn('key', 'Key', (item) => item.engineKey),
+      textColumn('mechanic', 'Mechanic', (item) => item.mechanicLabel),
+      categoryColumn('category', 'Category', (item) => item.category),
+      categoryColumn('type', 'Input type', (item) => item.inputTypeLabel),
+      textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
+        getFilterValue: (item) => item.updatedAt,
+        sortValue: (item) => item.updatedAt,
+      }),
+    ],
+    [],
+  )
 
-  const columns: AdminColumn<AttributeListItem>[] = [
-    { id: 'title', header: 'Attribute', render: (item) => item.title },
-    { id: 'key', header: 'Key', render: (item) => item.engineKey },
-    { id: 'mechanic', header: 'Mechanic', render: (item) => item.mechanicLabel },
-    { id: 'category', header: 'Category', render: (item) => item.category },
-    { id: 'type', header: 'Input type', render: (item) => item.inputTypeLabel },
-    {
-      id: 'updated',
-      header: 'Modified',
-      render: (item) => formatTimestamp(item.updatedAt),
-    },
-  ]
+  const { table } = useAdminListTable({ items: listItems, columns })
 
   function handleSectionChange(section: AttributeSource) {
     if (section !== attributeSourceTab) {
@@ -98,24 +103,24 @@ export function AttributesListView() {
         }
         addLabel={`Add ${sourceLabel} attribute`}
         onAdd={handleAdd}
-        filters={
-          <AdminFilterBar
-            search={list.search}
-            onSearchChange={list.setSearch}
-            category={list.category}
-            onCategoryChange={list.setCategory}
-            categoryOptions={list.categoryOptions}
-            resultCount={list.totalItems}
-          />
-        }
         pagination={
-          <AdminPagination page={list.page} totalPages={list.totalPages} onPageChange={list.setPage} />
+          <AdminPagination page={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
         }
       >
-        <AdminDataTable
+        <AdminListTable
           columns={columns}
-          items={list.pageItems}
+          items={listItems}
+          table={table}
+          entityLabel="attribute"
           onRowClick={(item) => openEntityEditor(item.id)}
+          rowActions={{
+            onEdit: (item) => openEntityEditor(item.id),
+            onDelete: (item) => deleteAttributeDefinitionRecord(item.id),
+            onDuplicate: (item) => {
+              const newId = duplicateAttributeDefinitionRecord(item.id)
+              openEntityEditor(newId)
+            },
+          }}
           emptyMessage={`No ${sourceLabel} attributes yet. Click "Add ${sourceLabel} attribute" to create one.`}
         />
       </AdminListShell>

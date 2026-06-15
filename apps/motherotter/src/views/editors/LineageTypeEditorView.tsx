@@ -1,15 +1,15 @@
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { DiceRollInput } from '../../components/admin/DiceRollInput'
+import { EntityLevelAbilityFields } from '../../components/admin/EntityLevelAbilityFields'
 import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
-import { LevelAbilityEditor } from '../../components/admin/LevelAbilityEditor'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
 import {
   LINEAGE_STAT_KEYS,
   LINEAGE_STAT_LABELS,
   type LineageStatKey,
 } from '../../admin/lineageTypes'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
-import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { useTaxonomyStore } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -27,7 +27,7 @@ export function LineageTypeEditorView() {
   const removeLineageType = useLineageTypesStore((state) => state.removeLineageType)
   const removeTaxonomyEntity = useTaxonomyStore((state) => state.removeEntity)
   const removeAttributeEntity = useAttributesStore((state) => state.removeEntity)
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
+  const removeAbilityEntity = useAbilitiesStore((state) => state.removeEntity)
 
   if (!selectedEntityId || !lineageType) {
     return (
@@ -58,6 +58,7 @@ export function LineageTypeEditorView() {
     removeLineageType(lineageType.id)
     removeTaxonomyEntity(lineageType.id)
     removeAttributeEntity(lineageType.id)
+    removeAbilityEntity(lineageType.id)
     closeEntityEditor()
   }
 
@@ -132,11 +133,9 @@ export function LineageTypeEditorView() {
         />
       </fieldset>
 
-      <LevelAbilityEditor
-        label="Type abilities by level"
-        grants={lineageType.levelAbilities}
-        abilities={abilities}
-        onChange={(levelAbilities) => updateLineageType(lineageType.id, { levelAbilities })}
+      <EntityLevelAbilityFields
+        entityId={lineageType.id}
+        entityLabel="character type"
         hint="Abilities unlock when a character of this type reaches each level."
       />
 

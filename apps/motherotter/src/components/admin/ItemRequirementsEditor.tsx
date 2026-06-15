@@ -9,6 +9,7 @@ import {
   type ItemRequirementSubject,
 } from '../../admin/itemTypes'
 import { useAttributesStore } from '../../store/attributesStore'
+import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useLineageTypesStore } from '../../store/lineageTypesStore'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
@@ -27,7 +28,7 @@ function operatorsForSubject(subject: ItemRequirementSubject): ItemRequirementOp
 
 export function ItemRequirementsEditor({ requirements, onChange }: ItemRequirementsEditorProps) {
   const attributeDefinitions = useAttributesStore((state) => state.definitions)
-  const abilities = useContentCatalogStore((state) => state.stubs.abilities)
+  const abilities = useAbilitiesStore((state) => state.definitions)
   const characters = useContentCatalogStore((state) => state.stubs.characters)
   const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
@@ -73,7 +74,7 @@ export function ItemRequirementsEditor({ requirements, onChange }: ItemRequireme
       case 'attribute':
         return attributeDefinitions.map((entry) => ({ id: entry.id, label: entry.name }))
       case 'ability':
-        return abilities.map((entry) => ({ id: entry.id, label: entry.title }))
+        return abilities.map((entry) => ({ id: entry.id, label: entry.name }))
       case 'character':
         return characters.map((entry) => ({ id: entry.id, label: entry.title }))
       case 'character_type':
