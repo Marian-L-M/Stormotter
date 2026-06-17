@@ -1,7 +1,11 @@
 export const EDITOR_MODES = [
-  'stories',
+  'storylines',
+  'dialogs',
+  'quests',
+  'journal',
   'state',
   'maps',
+  'de-otterer',
   'characters',
   'character-types',
   'character-classes',
@@ -12,6 +16,7 @@ export const EDITOR_MODES = [
   'abilities',
   'attributes',
   'triggers',
+  'gameplay',
   'rules',
   'settings',
   'files',
@@ -24,6 +29,7 @@ export type CharacterSectionMode = 'characters' | 'character-types' | 'character
 export type SidebarNavGroupId =
   | 'gameplay'
   | 'maps'
+  | 'de-otterer'
   | 'characters'
   | 'assets'
   | 'items'
@@ -45,7 +51,10 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     id: 'gameplay',
     label: 'Gameplay',
     children: [
-      { id: 'stories', label: 'Stories' },
+      { id: 'storylines', label: 'Storylines' },
+      { id: 'dialogs', label: 'Dialogs' },
+      { id: 'quests', label: 'Quests' },
+      { id: 'journal', label: 'Journal' },
       { id: 'state', label: 'State' },
     ],
   },
@@ -54,6 +63,12 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     id: 'maps',
     label: 'Maps',
     children: [{ id: 'maps', label: 'Maps' }],
+  },
+  {
+    type: 'group',
+    id: 'de-otterer',
+    label: 'De-Otterer',
+    children: [{ id: 'de-otterer', label: 'Icon library' }],
   },
   {
     type: 'group',
@@ -91,6 +106,7 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
       { id: 'abilities', label: 'Abilities' },
       { id: 'attributes', label: 'Attributes' },
       { id: 'triggers', label: 'Triggers' },
+      { id: 'gameplay', label: 'Gameplay' },
       { id: 'rules', label: 'Rules' },
     ],
   },
@@ -106,9 +122,13 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
 ]
 
 const MODE_LABELS: Record<EditorMode, string> = {
-  stories: 'Stories',
+  storylines: 'Storylines',
+  dialogs: 'Dialogs',
+  quests: 'Quests',
+  journal: 'Journal',
   state: 'State',
   maps: 'Maps',
+  'de-otterer': 'De-Otterer',
   characters: 'Characters',
   'character-types': 'Character Types',
   'character-classes': 'Character Classes',
@@ -119,6 +139,7 @@ const MODE_LABELS: Record<EditorMode, string> = {
   abilities: 'Abilities',
   attributes: 'Attributes',
   triggers: 'Triggers',
+  gameplay: 'Gameplay',
   rules: 'Rules',
   settings: 'Settings',
   files: 'Files',
@@ -138,5 +159,6 @@ export function isCharacterSectionMode(mode: EditorMode): mode is CharacterSecti
 
 export function normalizeEditorMode(mode: string): EditorMode {
   if (mode === 'races' || mode === 'classes') return 'character-types'
+  if (mode === 'stories') return 'storylines'
   return isEditorMode(mode) ? mode : 'maps'
 }

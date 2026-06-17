@@ -14,6 +14,10 @@ import {
   type DerivedStatBaseMap,
   type DerivedStatModifierMap,
 } from './derivedStatTypes'
+import {
+  normalizeEntityRendererSettings,
+  type EntityRendererSettings,
+} from './entityRendererTypes'
 
 export interface CharacterClass {
   id: string
@@ -33,6 +37,8 @@ export interface CharacterClass {
   derivedStatBases: DerivedStatBaseMap
   /** Flat bonuses applied to derived stats for this class */
   derivedStatModifiers: DerivedStatModifierMap
+  /** Per-render-engine map appearance overrides */
+  renderer: EntityRendererSettings
   updatedAt: string
 }
 
@@ -57,6 +63,7 @@ export type CharacterClassPatch = Partial<
     | 'hiddenInventoryActivatesUnequipped'
     | 'derivedStatBases'
     | 'derivedStatModifiers'
+    | 'renderer'
   >
 >
 
@@ -78,6 +85,7 @@ export function normalizeCharacterClass(
         : null,
     derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
     derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
+    renderer: normalizeEntityRendererSettings(raw.renderer, 'C'),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }

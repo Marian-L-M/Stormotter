@@ -22,11 +22,21 @@ import { normalizeLevelAbilityGrants, type LevelAbilityGrant } from '../admin/le
 import { MAIN_HAND_SLOT_COUNT, OFF_HAND_SLOT_COUNT } from '../admin/characterSlotTypes'
 import { normalizeSlotRules, type SlotRulesMap } from '../admin/slotRules'
 import {
+  normalizeCharacterLocationRules,
+  normalizeMapCellReference,
+  type CharacterLocationRule,
+  type MapCellReference,
+} from '../admin/characterLocationTypes'
+import {
   normalizeDerivedStatBaseMap,
   normalizeDerivedStatModifierMap,
   type DerivedStatBaseMap,
   type DerivedStatModifierMap,
 } from '../admin/derivedStatTypes'
+import {
+  normalizeCharacterEntityRenderer,
+  type EntityRendererSettings,
+} from '../admin/entityRendererTypes'
 
 export interface CharacterMeta {
   characterType: CharacterCategory
@@ -46,6 +56,13 @@ export interface CharacterMeta {
   activeOffHandSlot: number
   derivedStatBases: DerivedStatBaseMap
   derivedStatModifiers: DerivedStatModifierMap
+  isMain: boolean
+  isInGroup: boolean
+  isGroupAddable: boolean
+  activeLocation: MapCellReference | null
+  spawnLocationRules: CharacterLocationRule[]
+  despawnLocationRules: CharacterLocationRule[]
+  renderer: EntityRendererSettings
 }
 
 const DEFAULT_META: CharacterMeta = {
@@ -66,6 +83,13 @@ const DEFAULT_META: CharacterMeta = {
   activeOffHandSlot: 0,
   derivedStatBases: {},
   derivedStatModifiers: {},
+  isMain: false,
+  isInGroup: false,
+  isGroupAddable: false,
+  activeLocation: null,
+  spawnLocationRules: [],
+  despawnLocationRules: [],
+  renderer: {},
 }
 
 export { DEFAULT_META }
@@ -97,6 +121,13 @@ function normalizeMeta(
     activeOffHandSlot: normalizeHandSlotIndex(raw.activeOffHandSlot, OFF_HAND_SLOT_COUNT),
     derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
     derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
+    isMain: raw.isMain === true,
+    isInGroup: raw.isInGroup === true,
+    isGroupAddable: raw.isGroupAddable === true,
+    activeLocation: normalizeMapCellReference(raw.activeLocation),
+    spawnLocationRules: normalizeCharacterLocationRules(raw.spawnLocationRules),
+    despawnLocationRules: normalizeCharacterLocationRules(raw.despawnLocationRules),
+    renderer: normalizeCharacterEntityRenderer(raw.renderer),
   }
 
   const hasNewShape = raw.lineageTypeId !== undefined

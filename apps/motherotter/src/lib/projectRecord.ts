@@ -1,4 +1,8 @@
 import type { Container } from '../admin/containerTypes'
+import type { Dialog, DialogCategory } from '../admin/dialogTypes'
+import type { JournalCategory, JournalEntry } from '../admin/journalTypes'
+import type { Quest, QuestCategory } from '../admin/questTypes'
+import type { Storyline } from '../admin/storylineTypes'
 import type { Item } from '../admin/itemTypes'
 import type { AbilitiesContent } from '../admin/abilityTypes'
 import type { AttributesContent } from '../admin/attributeTypes'
@@ -15,9 +19,15 @@ import type { TaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem } from '../admin/types'
 import type { ItemSlotPlacementSettings } from '../admin/slotRules'
 import type { SlotRulesMap } from '../admin/slotRules'
+import type { EntranceTarget, SpawnPointConfig } from '@otter/game-state'
+import type { CharacterLocationRule, MapCellReference } from '../admin/characterLocationTypes'
 import type { DerivedStatBaseMap, DerivedStatModifierMap } from '../admin/derivedStatTypes'
 import type { EditorMode } from '../editorModes'
-import type { EditorTool } from '../editorTools'
+import type { DeOttererIcon } from '../admin/deOttererIconTypes'
+import type { EntityRendererSettings } from '../admin/entityRendererTypes'
+import type { MapRenderEngine } from '../admin/renderEngineTypes'
+import type { GameplaySettings } from '../admin/gameplaySettingsTypes'
+import type { MapToolKind } from '../editorTools'
 
 export interface SerializedCharacter {
   id: string
@@ -40,6 +50,13 @@ export interface SerializedCharacter {
   activeOffHandSlot?: number
   derivedStatBases?: DerivedStatBaseMap
   derivedStatModifiers?: DerivedStatModifierMap
+  isMain?: boolean
+  isInGroup?: boolean
+  isGroupAddable?: boolean
+  activeLocation?: MapCellReference | null
+  spawnLocationRules?: CharacterLocationRule[]
+  despawnLocationRules?: CharacterLocationRule[]
+  renderer?: EntityRendererSettings
 }
 
 export interface SerializedCatalogStubs {
@@ -60,11 +77,20 @@ export interface ProjectContent {
   abilities: AbilitiesContent
   items: Item[]
   containers: Container[]
+  dialogs: Dialog[]
+  dialogCategories: DialogCategory[]
+  quests: Quest[]
+  questCategories: QuestCategory[]
+  journalEntries: JournalEntry[]
+  journalCategories: JournalCategory[]
+  storylines: Storyline[]
   characters: SerializedCharacter[]
   catalogStubs: SerializedCatalogStubs
   taxonomy: TaxonomyState
   itemCategorySlotSettings: Record<string, ItemSlotPlacementSettings>
   itemClassSlotSettings: Record<string, ItemSlotPlacementSettings>
+  deOttererIcons: DeOttererIcon[]
+  gameplaySettings: GameplaySettings
 }
 
 export interface SerializedCell {
@@ -72,6 +98,17 @@ export interface SerializedCell {
   y: number
   layer: string
   contentId: string
+  entranceTarget?: EntranceTarget
+  spawnPoint?: SpawnPointConfig
+}
+
+export interface SerializedTile {
+  x: number
+  y: number
+  layer: string
+  passable: boolean
+  backgroundColor: string | null
+  backgroundIconId: string | null
 }
 
 export interface SerializedWorld {
@@ -79,6 +116,14 @@ export interface SerializedWorld {
   height: number
   layers: string[]
   cells: SerializedCell[]
+  tiles?: SerializedTile[]
+}
+
+export interface StoredMapEntry {
+  id: string
+  title: string
+  backdropMediaId: string | null
+  world: SerializedWorld
 }
 
 export interface StoredProject {
@@ -87,12 +132,19 @@ export interface StoredProject {
   title: string
   mapId: string
   activeLayer: string
-  selectedTool: EditorTool
+  mapToolKind?: MapToolKind
+  mapPlacementEntityId?: string | null
+  /** @deprecated Migrated to mapToolKind + mapPlacementEntityId on load. */
+  selectedTool?: string
   activeMode: EditorMode
   mapBackdropMediaId: string | null
+  mapRenderEngine?: MapRenderEngine
+  enabledMapRenderEngines?: MapRenderEngine[]
   mediaMaxFileBytes: number
   mediaProjectSoftBudgetBytes: number
   world: SerializedWorld
+  /** All maps in the project. When absent, legacy single-map fields are used. */
+  maps?: StoredMapEntry[]
   content?: ProjectContent
   formatVersion: string
   createdAt: string
@@ -129,4 +181,8 @@ export function createProjectId(): string {
 
 export function createDefaultGameId(): string {
   return `game-${crypto.randomUUID().slice(0, 8)}`
+}
+
+export function createMapId(): string {
+  return `map-${crypto.randomUUID().slice(0, 8)}`
 }

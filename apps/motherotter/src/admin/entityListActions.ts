@@ -1,4 +1,5 @@
 import type { CharacterCategory } from './characterTypes'
+import type { Dialog } from './dialogTypes'
 import { normalizeItem, type Item } from './itemTypes'
 import type { AdminTableFeatures, StubContentType } from './types'
 import { useAbilitiesStore } from '../store/abilitiesStore'
@@ -8,6 +9,10 @@ import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useCharacterMetaStore } from '../store/characterMetaStore'
 import { useContainersStore } from '../store/containersStore'
 import { useContentCatalogStore } from '../store/contentCatalogStore'
+import { useDialogsStore } from '../store/dialogsStore'
+import { useJournalStore } from '../store/journalStore'
+import { useQuestsStore } from '../store/questsStore'
+import { useStorylinesStore } from '../store/storylinesStore'
 import { useItemsStore } from '../store/itemsStore'
 import { useLineageTypesStore } from '../store/lineageTypesStore'
 import { useStateVariablesStore } from '../store/stateVariablesStore'
@@ -52,6 +57,77 @@ export function deleteItemRecord(id: string): void {
   useItemsStore.getState().removeItem(id)
   useAttributesStore.getState().removeEntity(id)
   useAbilitiesStore.getState().removeEntity(id)
+}
+
+export function deleteDialogRecord(id: string): void {
+  useDialogsStore.getState().removeDialog(id)
+  useTaxonomyStore.getState().removeEntity(id)
+}
+
+export function duplicateDialogRecord(source: Dialog): string {
+  const newId = useDialogsStore.getState().addDialog()
+  useDialogsStore.getState().updateDialog(newId, {
+    name: copySuffix(source.name),
+    summary: source.summary,
+    categoryId: source.categoryId,
+    characterId: source.characterId,
+    trigger: structuredClone(source.trigger),
+    conversation: structuredClone(source.conversation),
+  })
+  return newId
+}
+
+export function deleteQuestRecord(id: string): void {
+  useQuestsStore.getState().removeQuest(id)
+  useTaxonomyStore.getState().removeEntity(id)
+}
+
+export function duplicateQuestRecord(source: import('./questTypes').Quest): string {
+  const newId = useQuestsStore.getState().addQuest()
+  useQuestsStore.getState().updateQuest(newId, {
+    name: copySuffix(source.name),
+    summary: source.summary,
+    categoryId: source.categoryId,
+    journalPreview: source.journalPreview,
+    trigger: structuredClone(source.trigger),
+    objectives: structuredClone(source.objectives),
+    objectiveJoin: source.objectiveJoin,
+    rewards: structuredClone(source.rewards),
+    completionActions: structuredClone(source.completionActions),
+  })
+  return newId
+}
+
+export function deleteJournalEntryRecord(id: string): void {
+  useJournalStore.getState().removeEntry(id)
+  useTaxonomyStore.getState().removeEntity(id)
+}
+
+export function duplicateJournalEntryRecord(source: import('./journalTypes').JournalEntry): string {
+  const newId = useJournalStore.getState().addEntry()
+  useJournalStore.getState().updateEntry(newId, {
+    title: copySuffix(source.title),
+    body: source.body,
+    categoryId: source.categoryId,
+    linkedQuestId: source.linkedQuestId,
+    displayConditions: structuredClone(source.displayConditions),
+  })
+  return newId
+}
+
+export function deleteStorylineRecord(id: string): void {
+  useStorylinesStore.getState().removeStoryline(id)
+  useTaxonomyStore.getState().removeEntity(id)
+}
+
+export function duplicateStorylineRecord(source: import('./storylineTypes').Storyline): string {
+  const newId = useStorylinesStore.getState().addStoryline()
+  useStorylinesStore.getState().updateStoryline(newId, {
+    name: copySuffix(source.name),
+    summary: source.summary,
+    flow: structuredClone(source.flow),
+  })
+  return newId
 }
 
 export function deleteCharacterRecord(id: string): void {

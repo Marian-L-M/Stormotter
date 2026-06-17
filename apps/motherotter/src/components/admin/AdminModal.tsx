@@ -6,7 +6,7 @@ interface AdminModalProps {
   onClose: () => void
   children: ReactNode
   footer?: ReactNode
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
 }
 
 export function AdminModal({ open, title, onClose, children, footer, size = 'md' }: AdminModalProps) {

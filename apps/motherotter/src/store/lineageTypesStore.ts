@@ -26,6 +26,7 @@ function seedLineageType(name: string, description: string): CharacterLineageTyp
     hiddenInventoryActivatesUnequipped: null,
     derivedStatBases: {},
     derivedStatModifiers: {},
+    renderer: {},
     updatedAt: timestamp,
   }
 }

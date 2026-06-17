@@ -5,6 +5,7 @@ import { EntityLevelAbilityFields } from '../../components/admin/EntityLevelAbil
 import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
 import { ItemEffectsEditor } from '../../components/admin/ItemEffectsEditor'
 import { ItemRequirementsEditor } from '../../components/admin/ItemRequirementsEditor'
+import { EntityRendererEditorPanel } from '../../components/admin/EntityRendererEditorPanel'
 import { AllowedSlotTypesEditor } from '../../components/admin/AllowedSlotTypesEditor'
 import { MediaPickerField } from '../../components/media/MediaPickerField'
 import {
@@ -26,6 +27,7 @@ import { useEditorStore } from '../../store/editorStore'
 const ITEM_EDITOR_TABS = [
   { id: 'details', label: 'Details' },
   { id: 'media', label: 'Media' },
+  { id: 'renderer', label: 'Renderer' },
   { id: 'attributes', label: 'Attributes' },
   { id: 'effects', label: 'Abilities & Effects' },
   { id: 'slots', label: 'Slots' },
@@ -33,12 +35,24 @@ const ITEM_EDITOR_TABS = [
 
 type ItemEditorTab = (typeof ITEM_EDITOR_TABS)[number]['id']
 
-export function ItemEditorView() {
+interface ItemEditorViewProps {
+  overrideEntityId?: string
+  variant?: 'page' | 'embedded'
+  onBack?: () => void
+}
+
+export function ItemEditorView({
+  overrideEntityId,
+  variant = 'page',
+  onBack,
+}: ItemEditorViewProps = {}) {
   const [activeTab, setActiveTab] = useState<ItemEditorTab>('details')
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId)
   const closeEntityEditor = useEditorStore((state) => state.closeEntityEditor)
+  const entityId = overrideEntityId ?? selectedEntityId
+  const handleBack = onBack ?? closeEntityEditor
   const itemOrUndefined = useItemsStore((state) =>
-    selectedEntityId ? state.items.find((entry) => entry.id === selectedEntityId) : undefined,
+    entityId ? state.items.find((entry) => entry.id === entityId) : undefined,
   )
   const updateItem = useItemsStore((state) => state.updateItem)
   const removeItem = useItemsStore((state) => state.removeItem)
@@ -48,11 +62,11 @@ export function ItemEditorView() {
 
   const containerOptions = containers.filter((entry) => containerKindUsesUniqueItems(entry.kind))
 
-  if (!selectedEntityId || !itemOrUndefined) {
+  if (!entityId || !itemOrUndefined) {
     return (
       <section className="editor-view">
         <p className="admin-empty">Item not found.</p>
-        <button type="button" onClick={closeEntityEditor}>
+        <button type="button" onClick={handleBack}>
           Back to list
         </button>
       </section>
@@ -66,7 +80,11 @@ export function ItemEditorView() {
     removeItem(item.id)
     removeAttributeEntity(item.id)
     removeAbilityEntity(item.id)
-    closeEntityEditor()
+    if (variant === 'page') {
+      closeEntityEditor()
+    } else {
+      handleBack()
+    }
   }
 
   function renderTabContent() {
@@ -268,6 +286,16 @@ export function ItemEditorView() {
           </>
         )
 
+      case 'renderer':
+        return (
+          <EntityRendererEditorPanel
+            value={item.renderer}
+            defaultGlyph="*"
+            entityLabel="item"
+            onChange={(renderer) => updateItem(item.id, { renderer })}
+          />
+        )
+
       case 'attributes':
         return (
           <>
@@ -350,10 +378,20 @@ export function ItemEditorView() {
     }
   }
 
-  return (
-    <AdminEditorShell listLabel="Items" itemTitle={item.name} onBack={closeEntityEditor}>
+  const tabContent = (
+    <>
       <AdminSectionNav sections={[...ITEM_EDITOR_TABS]} active={activeTab} onChange={setActiveTab} />
       {renderTabContent()}
+    </>
+  )
+
+  if (variant === 'embedded') {
+    return <div className="admin-editor-embedded">{tabContent}</div>
+  }
+
+  return (
+    <AdminEditorShell listLabel="Items" itemTitle={item.name} onBack={handleBack}>
+      {tabContent}
     </AdminEditorShell>
   )
 }

@@ -1,7 +1,6 @@
 import type { EditorMode } from '../editorModes'
 import type { SettingsSectionId, StubContentType } from '../admin/types'
 import { isEditorMode } from '../editorModes'
-import { MapEditorView } from './editors/MapEditorView'
 import { SettingsSectionEditorView } from './editors/SettingsSectionEditorView'
 import { StateVariableEditorView } from './editors/StateVariableEditorView'
 import { StubContentEditorView } from './editors/StubContentEditorView'
@@ -9,6 +8,7 @@ import { CharactersTabView } from './CharactersTabView'
 import { ContentTabListView } from './lists/ContentTabListView'
 import { FilesView } from './FilesView'
 import { MapsListView } from './lists/MapsListView'
+import { DeOttererIconLibraryView } from './DeOttererIconLibraryView'
 import { MediaLibraryTabView } from './MediaLibraryTabView'
 import { AttributesTabView } from './AttributesTabView'
 import { AbilitiesTabView } from './AbilitiesTabView'
@@ -18,19 +18,19 @@ import { ContainersTabView } from './ContainersTabView'
 import { TriggersTabView } from './TriggersTabView'
 import { CharacterClassesTabView } from './CharacterClassesTabView'
 import { CharacterTypesTabView } from './CharacterTypesTabView'
+import { DialogsTabView } from './DialogsTabView'
+import { JournalTabView } from './JournalTabView'
+import { QuestsTabView } from './QuestsTabView'
+import { StorylinesTabView } from './StorylinesTabView'
+import { GameplaySettingsTabView } from './GameplaySettingsTabView'
 import { SettingsListView } from './lists/SettingsListView'
 import { StateListView } from './lists/StateListView'
 import { useEditorStore } from '../store/editorStore'
 
 const STUB_TABS: Record<
-  StubContentType,
+  Exclude<StubContentType, 'abilities' | 'stories'>,
   { title: string; description: string; addLabel: string }
 > = {
-  stories: {
-    title: 'Stories',
-    description: 'Storyline nodes, dialog trees, and narrative triggers.',
-    addLabel: 'Add Story',
-  },
   characters: {
     title: 'Characters',
     description:
@@ -47,11 +47,6 @@ const STUB_TABS: Record<
     description: 'Chests, corpses, and other lootable world objects.',
     addLabel: 'Add Container',
   },
-  abilities: {
-    title: 'Abilities',
-    description: 'Skills, spells, and action definitions.',
-    addLabel: 'Add Ability',
-  },
   rules: {
     title: 'Rules',
     description: 'Turn-based rules engine presets and combat parameters.',
@@ -59,12 +54,19 @@ const STUB_TABS: Record<
   },
 }
 
-function isStubContentType(mode: EditorMode): mode is Exclude<StubContentType, 'abilities'> {
-  return mode in STUB_TABS && mode !== 'abilities'
+function isStubContentType(
+  mode: EditorMode,
+): mode is Exclude<StubContentType, 'abilities' | 'stories'> {
+  return mode in STUB_TABS
 }
 
 function isSettingsSectionId(id: string): id is SettingsSectionId {
-  return id === 'project-metadata' || id === 'editor-preferences' || id === 'media-library'
+  return (
+    id === 'project-metadata' ||
+    id === 'editor-preferences' ||
+    id === 'media-library' ||
+    id === 'render-engines'
+  )
 }
 
 interface EditorModePanelProps {
@@ -97,9 +99,13 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
 
   if (mode === 'maps') {
     if (editorScreen === 'edit' && selectedEntityId === mapId) {
-      return <MapEditorView />
+      return null
     }
     return <MapsListView />
+  }
+
+  if (mode === 'de-otterer') {
+    return <DeOttererIconLibraryView />
   }
 
   if (mode === 'state') {
@@ -107,6 +113,22 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
       return <StateVariableEditorView />
     }
     return <StateListView />
+  }
+
+  if (mode === 'storylines') {
+    return <StorylinesTabView />
+  }
+
+  if (mode === 'dialogs') {
+    return <DialogsTabView />
+  }
+
+  if (mode === 'quests') {
+    return <QuestsTabView />
+  }
+
+  if (mode === 'journal') {
+    return <JournalTabView />
   }
 
   if (mode === 'attributes') {
@@ -119,6 +141,10 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
 
   if (mode === 'triggers') {
     return <TriggersTabView />
+  }
+
+  if (mode === 'gameplay') {
+    return <GameplaySettingsTabView />
   }
 
   if (mode === 'characters') {

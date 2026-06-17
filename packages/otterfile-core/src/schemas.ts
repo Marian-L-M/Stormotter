@@ -11,11 +11,36 @@ const semverSchema = z
   .string()
   .regex(/^\d+\.\d+\.\d+$/, 'Must be semver (e.g. 0.1.0)')
 
+export const entranceTargetSchema = z.object({
+  mapId: identifierSchema,
+  x: z.number().int().min(0).max(MAX_MAP_DIMENSION - 1),
+  y: z.number().int().min(0).max(MAX_MAP_DIMENSION - 1),
+  layer: z.string().min(1).max(64),
+})
+
+export const spawnPointConfigSchema = z.object({
+  entityKind: z.enum(['character', 'item', 'container', 'entrance']),
+  entityId: z.string().min(1).max(256),
+  entranceTarget: entranceTargetSchema.optional(),
+  conditions: z.unknown().nullable().optional(),
+})
+
 export const mapCellSchema = z.object({
   x: z.number().int().min(0).max(MAX_MAP_DIMENSION - 1),
   y: z.number().int().min(0).max(MAX_MAP_DIMENSION - 1),
   layer: z.string().min(1).max(64),
   contentId: z.string().min(1).max(256),
+  entranceTarget: entranceTargetSchema.optional(),
+  spawnPoint: spawnPointConfigSchema.optional(),
+})
+
+export const mapTileSchema = z.object({
+  x: z.number().int().min(0).max(MAX_MAP_DIMENSION - 1),
+  y: z.number().int().min(0).max(MAX_MAP_DIMENSION - 1),
+  layer: z.string().min(1).max(64),
+  passable: z.boolean(),
+  backgroundColor: z.string().max(32).nullable().optional(),
+  backgroundIconId: z.string().max(64).nullable().optional(),
 })
 
 export const mapSchema = z
@@ -28,6 +53,7 @@ export const mapSchema = z
       .min(1)
       .max(MAX_LAYER_COUNT),
     cells: z.array(mapCellSchema),
+    tiles: z.array(mapTileSchema).optional(),
   })
   .superRefine((map, ctx) => {
     const uniqueLayers = new Set(map.layers)
@@ -76,6 +102,43 @@ export const mapSchema = z
         })
       }
       seenKeys.add(key)
+    }
+
+    const seenTileKeys = new Set<string>()
+    for (const [index, tile] of (map.tiles ?? []).entries()) {
+      if (!layerSet.has(tile.layer)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Unknown layer "${tile.layer}"`,
+          path: ['tiles', index, 'layer'],
+        })
+      }
+
+      if (tile.x >= map.width) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `x=${tile.x} is outside map width ${map.width}`,
+          path: ['tiles', index, 'x'],
+        })
+      }
+
+      if (tile.y >= map.height) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `y=${tile.y} is outside map height ${map.height}`,
+          path: ['tiles', index, 'y'],
+        })
+      }
+
+      const tileKey = `${tile.x},${tile.y},${tile.layer}`
+      if (seenTileKeys.has(tileKey)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate tile at ${tileKey}`,
+          path: ['tiles', index],
+        })
+      }
+      seenTileKeys.add(tileKey)
     }
   })
 

@@ -51,6 +51,7 @@ export const useItemsStore = create<ItemsState>()(
         if (patch.actionSoundMediaId !== undefined) item.actionSoundMediaId = patch.actionSoundMediaId
         if (patch.requirements !== undefined) item.requirements = patch.requirements
         if (patch.effects !== undefined) item.effects = patch.effects
+        if (patch.renderer !== undefined) item.renderer = patch.renderer
 
         if (patch.scope !== undefined) {
           item.scope = patch.scope

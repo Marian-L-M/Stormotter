@@ -43,3 +43,23 @@ export function normalizeCharacterCategory(value: string): CharacterCategory {
 export function getCharacterCategoryLabel(category: CharacterCategory): string {
   return CHARACTER_CATEGORY_LABELS[category]
 }
+
+export function characterHasMainFlag(category: CharacterCategory): boolean {
+  return category === 'user-generated'
+}
+
+export function characterHasGroupFlags(category: CharacterCategory): boolean {
+  return category === 'unique-npc-playable'
+}
+
+export function characterSupportsMapLocations(category: CharacterCategory): boolean {
+  return (
+    category === 'user-generated' ||
+    category === 'unique-npc-playable' ||
+    category === 'unique-npc-unplayable'
+  )
+}
+
+export function isUniqueNpcCharacter(category: CharacterCategory): boolean {
+  return category === 'unique-npc-playable' || category === 'unique-npc-unplayable'
+}

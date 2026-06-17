@@ -40,6 +40,10 @@ import {
   type DerivedStatBaseMap,
   type DerivedStatModifierMap,
 } from './derivedStatTypes'
+import {
+  normalizeEntityRendererSettings,
+  type EntityRendererSettings,
+} from './entityRendererTypes'
 
 export interface CharacterLineageType {
   id: string
@@ -58,6 +62,8 @@ export interface CharacterLineageType {
   derivedStatBases: DerivedStatBaseMap
   /** Flat bonuses applied to derived stats for this type */
   derivedStatModifiers: DerivedStatModifierMap
+  /** Per-render-engine map appearance overrides */
+  renderer: EntityRendererSettings
   updatedAt: string
 }
 
@@ -82,6 +88,7 @@ export type LineageTypePatch = Partial<
     | 'hiddenInventoryActivatesUnequipped'
     | 'derivedStatBases'
     | 'derivedStatModifiers'
+    | 'renderer'
   >
 >
 
@@ -103,6 +110,7 @@ export function normalizeLineageType(
         : null,
     derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
     derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
+    renderer: normalizeEntityRendererSettings(raw.renderer, 'T'),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }

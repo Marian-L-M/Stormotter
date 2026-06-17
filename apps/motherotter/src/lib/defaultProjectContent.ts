@@ -8,9 +8,14 @@ import { createEmptyAbilitiesContent } from '../admin/abilityTypes'
 import { createEmptyAttributesContent } from '../admin/attributeTypes'
 import { createEmptyItem } from '../admin/itemTypes'
 import { createEmptyContainer } from '../admin/containerTypes'
+import { createEmptyDialog, defaultDialogCategories } from '../admin/dialogTypes'
+import { createEmptyJournalEntry, defaultJournalCategories } from '../admin/journalTypes'
+import { createEmptyQuest, defaultQuestCategories } from '../admin/questTypes'
+import { createEmptyStoryline } from '../admin/storylineTypes'
 import { createEmptyTaxonomyState } from '../admin/taxonomyTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { AdminListItem } from '../admin/types'
+import { createDefaultGameplaySettings } from '../admin/gameplaySettingsTypes'
 import type { ProjectContent, SerializedCatalogStubs, SerializedCharacter } from './projectRecord'
 
 function createStateId(): string {
@@ -86,6 +91,7 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      renderer: {},
       updatedAt: timestamp,
     },
     {
@@ -105,6 +111,7 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      renderer: {},
       updatedAt: timestamp,
     },
   ]
@@ -124,6 +131,7 @@ function defaultCharacterClasses(): CharacterClass[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      renderer: {},
       updatedAt: timestamp,
     },
     {
@@ -137,6 +145,7 @@ function defaultCharacterClasses(): CharacterClass[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      renderer: {},
       updatedAt: timestamp,
     },
   ]
@@ -191,6 +200,14 @@ function defaultCatalogStubs(): SerializedCatalogStubs {
   }
 }
 
+function defaultDialogs() {
+  return [createEmptyDialog('New Dialog 1')]
+}
+
+function defaultDialogCategoriesList() {
+  return defaultDialogCategories()
+}
+
 export function createDefaultProjectContent(): ProjectContent {
   return {
     stateVariables: defaultStateVariables(),
@@ -202,10 +219,19 @@ export function createDefaultProjectContent(): ProjectContent {
     abilities: createEmptyAbilitiesContent(),
     items: defaultItems(),
     containers: defaultContainers(),
+    dialogs: defaultDialogs(),
+    dialogCategories: defaultDialogCategoriesList(),
+    quests: [createEmptyQuest('Sample quest')],
+    questCategories: defaultQuestCategories(),
+    journalEntries: [createEmptyJournalEntry('Sample journal entry')],
+    journalCategories: defaultJournalCategories(),
+    storylines: [createEmptyStoryline('Sample storyline')],
     characters: defaultCharacters(),
     catalogStubs: defaultCatalogStubs(),
     taxonomy: createEmptyTaxonomyState(),
     itemCategorySlotSettings: {},
     itemClassSlotSettings: {},
+    deOttererIcons: [],
+    gameplaySettings: createDefaultGameplaySettings(),
   }
 }

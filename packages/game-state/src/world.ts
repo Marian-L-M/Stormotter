@@ -1,3 +1,32 @@
+/** Destination for an entrance cell on the map grid. */
+export interface EntranceTarget {
+  mapId: string
+  x: number
+  y: number
+  layer: string
+}
+
+export type SpawnPointEntityKind = 'character' | 'item' | 'container' | 'entrance'
+
+/** Conditional spawn configuration stored on a spawn-point cell. */
+export interface SpawnPointConfig {
+  entityKind: SpawnPointEntityKind
+  entityId: string
+  entranceTarget?: EntranceTarget
+  /** Gameplay condition group JSON — evaluated at runtime when present. */
+  conditions: unknown | null
+}
+
+/** Per-tile passability and decoration (separate from entity cells). */
+export interface MapTile {
+  x: number
+  y: number
+  layer: string
+  passable: boolean
+  backgroundColor: string | null
+  backgroundIconId: string | null
+}
+
 /** A single occupied grid cell in sparse storage. */
 export interface Cell {
   x: number
@@ -5,6 +34,10 @@ export interface Cell {
   layer: string
   /** Content reference from the otterfile (e.g. character:hero). */
   contentId: string
+  /** Where an entrance cell leads when entered. */
+  entranceTarget?: EntranceTarget
+  /** Conditional spawn when gameplay state matches. */
+  spawnPoint?: SpawnPointConfig
 }
 
 /** Headless world model — no renderer or DOM imports. */
@@ -13,6 +46,7 @@ export interface WorldModel {
   height: number
   layers: readonly string[]
   cells: Map<string, Cell>
+  tiles: Map<string, MapTile>
 }
 
 export function cellKey(x: number, y: number, layer: string): string {
@@ -29,6 +63,7 @@ export function createEmptyWorld(
     height,
     layers,
     cells: new Map(),
+    tiles: new Map(),
   }
 }
 

@@ -1,5 +1,6 @@
 import { normalizeAllowedSlotTypes } from './slotRules'
 import type { AdminListItem } from './types'
+import { normalizeItemEntityRenderer, type EntityRendererSettings } from './entityRendererTypes'
 
 // ---------------------------------------------------------------------------
 // Item section tabs (within Items mode)
@@ -637,6 +638,7 @@ export interface Item {
   actionSoundMediaId: string | null
   requirements: ItemRequirement[]
   effects: ItemEffect[]
+  renderer: EntityRendererSettings
   updatedAt: string
 }
 
@@ -659,6 +661,7 @@ export type ItemPatch = Partial<
     | 'actionSoundMediaId'
     | 'requirements'
     | 'effects'
+    | 'renderer'
   >
 >
 
@@ -698,6 +701,7 @@ export function createEmptyItem(name = 'Untitled item', scope: ItemScope = 'gene
     actionSoundMediaId: null,
     requirements: [],
     effects: [],
+    renderer: normalizeItemEntityRenderer(undefined),
     updatedAt: timestamp,
   }
 }
@@ -799,6 +803,7 @@ export function normalizeItem(raw: Partial<Item> & { id: string }): Item {
     actionSoundMediaId: normalizeMediaId(raw.actionSoundMediaId),
     requirements: (raw.requirements ?? []).map((entry) => normalizeItemRequirement(entry)),
     effects: (raw.effects ?? []).map((entry) => normalizeItemEffect(entry)),
+    renderer: normalizeItemEntityRenderer(raw.renderer),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }

@@ -13,6 +13,26 @@ export function worldFromMap(map: OtterMap): WorldModel {
       y: cell.y,
       layer: cell.layer,
       contentId: cell.contentId,
+      ...(cell.entranceTarget ? { entranceTarget: { ...cell.entranceTarget } } : {}),
+      ...(cell.spawnPoint
+        ? {
+            spawnPoint: {
+              ...cell.spawnPoint,
+              conditions: cell.spawnPoint.conditions ?? null,
+            },
+          }
+        : {}),
+    })
+  }
+
+  for (const tile of map.tiles ?? []) {
+    world.tiles.set(cellKey(tile.x, tile.y, tile.layer), {
+      x: tile.x,
+      y: tile.y,
+      layer: tile.layer,
+      passable: tile.passable ?? true,
+      backgroundColor: tile.backgroundColor ?? null,
+      backgroundIconId: tile.backgroundIconId ?? null,
     })
   }
 

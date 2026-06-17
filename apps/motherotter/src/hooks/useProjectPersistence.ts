@@ -7,6 +7,10 @@ import { useEditorStore } from '../store/editorStore'
 import { useMediaLibraryStore } from '../store/mediaLibraryStore'
 import { useAttributesStore } from '../store/attributesStore'
 import { useContainersStore } from '../store/containersStore'
+import { useDialogsStore } from '../store/dialogsStore'
+import { useJournalStore } from '../store/journalStore'
+import { useQuestsStore } from '../store/questsStore'
+import { useStorylinesStore } from '../store/storylinesStore'
 import { useItemsStore } from '../store/itemsStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
@@ -188,6 +192,31 @@ export function useProjectPersistence() {
       }
     })
 
+    const unsubscribeDialogs = useDialogsStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
+    const subscribeContentStore = (subscribe: (listener: () => void) => () => void) =>
+      subscribe(() => {
+        const state = useEditorStore.getState()
+        if (state.hydrating) return
+        const current = buildPersistState()
+        if (hasProjectContentChanges(current, previous)) {
+          previous = current
+          handleChange()
+        }
+      })
+
+    const unsubscribeQuests = subscribeContentStore(useQuestsStore.subscribe)
+    const unsubscribeJournal = subscribeContentStore(useJournalStore.subscribe)
+    const unsubscribeStorylines = subscribeContentStore(useStorylinesStore.subscribe)
+
     return () => {
       unsubscribeEditor()
       unsubscribeCatalog()
@@ -199,6 +228,10 @@ export function useProjectPersistence() {
       unsubscribeAttributes()
       unsubscribeItems()
       unsubscribeContainers()
+      unsubscribeDialogs()
+      unsubscribeQuests()
+      unsubscribeJournal()
+      unsubscribeStorylines()
       unsubscribeMeta()
       unsubscribeTaxonomy()
       if (timerRef.current) clearTimeout(timerRef.current)

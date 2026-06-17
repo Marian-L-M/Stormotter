@@ -23,6 +23,13 @@ const SECTIONS: SettingsSectionItem[] = [
     subtitle: 'Per-file size limit and project storage warning threshold',
   },
   {
+    id: 'render-engines',
+    title: 'Render engines',
+    category: 'Maps',
+    updatedAt: new Date().toISOString(),
+    subtitle: 'Choose which map render engines are available (De-Otterer)',
+  },
+  {
     id: 'editor-preferences',
     title: 'Editor preferences',
     category: 'General',

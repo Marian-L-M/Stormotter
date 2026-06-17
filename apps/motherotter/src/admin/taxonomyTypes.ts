@@ -1,5 +1,9 @@
 export type TaxonomyDomain =
   | 'stories'
+  | 'storylines'
+  | 'dialogs'
+  | 'quests'
+  | 'journal'
   | 'characters'
   | 'character-types'
   | 'character-classes'
@@ -33,6 +37,10 @@ export interface TaxonomyState {
 
 export const TAXONOMY_DOMAINS: TaxonomyDomain[] = [
   'stories',
+  'storylines',
+  'dialogs',
+  'quests',
+  'journal',
   'characters',
   'character-types',
   'character-classes',

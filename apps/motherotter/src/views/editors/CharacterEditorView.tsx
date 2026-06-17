@@ -2,6 +2,10 @@ import { useState } from 'react'
 import {
   CHARACTER_CATEGORY_LABELS,
   CHARACTER_CATEGORY_ORDER,
+  characterHasGroupFlags,
+  characterHasMainFlag,
+  characterSupportsMapLocations,
+  isUniqueNpcCharacter,
   type CharacterCategory,
 } from '../../admin/characterTypes'
 import {
@@ -21,6 +25,8 @@ import { SlotRulesEditor } from '../../components/admin/SlotRulesEditor'
 import { CharacterInventorySlotsPanel } from '../../components/admin/CharacterInventorySlotsPanel'
 import { CharacterSlotItemsPanel } from '../../components/admin/CharacterSlotItemsPanel'
 import { MediaPickerField } from '../../components/media/MediaPickerField'
+import { CharacterMapSettingsPanel } from '../../components/admin/CharacterMapSettingsPanel'
+import { EntityRendererEditorPanel } from '../../components/admin/EntityRendererEditorPanel'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
@@ -38,6 +44,8 @@ import { useEditorStore } from '../../store/editorStore'
 
 const CHARACTER_EDITOR_TABS = [
   { id: 'details', label: 'Details' },
+  { id: 'renderer', label: 'Renderer' },
+  { id: 'map', label: 'Map' },
   { id: 'levels', label: 'Levels' },
   { id: 'stats', label: 'Stats' },
   { id: 'abilities', label: 'Abilities' },
@@ -47,20 +55,30 @@ const CHARACTER_EDITOR_TABS = [
 
 type CharacterEditorTab = (typeof CHARACTER_EDITOR_TABS)[number]['id']
 
-export function CharacterEditorView() {
+interface CharacterEditorViewProps {
+  overrideEntityId?: string
+  variant?: 'page' | 'embedded'
+  onBack?: () => void
+}
+
+export function CharacterEditorView({
+  overrideEntityId,
+  variant = 'page',
+  onBack,
+}: CharacterEditorViewProps = {}) {
   const [activeTab, setActiveTab] = useState<CharacterEditorTab>('details')
   const [activeSlotContainerId, setActiveSlotContainerId] = useState<string | null>(null)
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId)
   const closeEntityEditor = useEditorStore((state) => state.closeEntityEditor)
+  const entityId = overrideEntityId ?? selectedEntityId
+  const handleBack = onBack ?? closeEntityEditor
   const item = useContentCatalogStore((state) =>
-    selectedEntityId
-      ? state.stubs.characters.find((entry) => entry.id === selectedEntityId)
-      : undefined,
+    entityId ? state.stubs.characters.find((entry) => entry.id === entityId) : undefined,
   )
   const updateItem = useContentCatalogStore((state) => state.updateItem)
   const removeItem = useContentCatalogStore((state) => state.removeItem)
   const storedMeta = useCharacterMetaStore((state) =>
-    selectedEntityId ? state.metaByCharacterId[selectedEntityId] : undefined,
+    entityId ? state.metaByCharacterId[entityId] : undefined,
   )
   const updateMeta = useCharacterMetaStore((state) => state.updateMeta)
   const removeMeta = useCharacterMetaStore((state) => state.removeMeta)
@@ -74,11 +92,11 @@ export function CharacterEditorView() {
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
   const audioProfiles = useAudioProfilesStore((state) => state.audioProfiles)
 
-  if (!selectedEntityId || !item) {
+  if (!entityId || !item) {
     return (
       <section className="editor-view">
         <p className="admin-empty">Character not found.</p>
-        <button type="button" onClick={closeEntityEditor}>
+        <button type="button" onClick={handleBack}>
           Back to list
         </button>
       </section>
@@ -106,7 +124,11 @@ export function CharacterEditorView() {
     removeTaxonomyEntity(character.id)
     removeAttributeEntity(character.id)
     removeAbilityEntity(character.id)
-    closeEntityEditor()
+    if (variant === 'page') {
+      closeEntityEditor()
+    } else {
+      handleBack()
+    }
   }
 
   function updateStat(stat: LineageStatKey, rawValue: string) {
@@ -169,6 +191,40 @@ export function CharacterEditorView() {
                 ))}
               </select>
             </label>
+
+            {characterHasMainFlag(meta.characterType) ? (
+              <label className="field admin-checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={meta.isMain}
+                  onChange={(event) => updateMeta(character.id, { isMain: event.target.checked })}
+                />
+                <span>Main character</span>
+              </label>
+            ) : null}
+
+            {characterHasGroupFlags(meta.characterType) ? (
+              <>
+                <label className="field admin-checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={meta.isInGroup}
+                    onChange={(event) => updateMeta(character.id, { isInGroup: event.target.checked })}
+                  />
+                  <span>In group</span>
+                </label>
+                <label className="field admin-checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={meta.isGroupAddable}
+                    onChange={(event) =>
+                      updateMeta(character.id, { isGroupAddable: event.target.checked })
+                    }
+                  />
+                  <span>Group addable</span>
+                </label>
+              </>
+            ) : null}
 
             <label className="field">
               <span>Character type</span>
@@ -262,6 +318,46 @@ export function CharacterEditorView() {
                 Delete character
               </button>
             </div>
+          </>
+        )
+
+      case 'renderer':
+        return (
+          <EntityRendererEditorPanel
+            value={meta.renderer}
+            defaultGlyph="@"
+            entityLabel="character"
+            onChange={(renderer) => updateMeta(character.id, { renderer })}
+          />
+        )
+
+      case 'map':
+        if (!characterSupportsMapLocations(meta.characterType)) {
+          return (
+            <p className="admin-empty">
+              Map locations are only available for user-generated and unique NPC characters.
+            </p>
+          )
+        }
+        return (
+          <>
+            <p className="admin-editor-lead">
+              Configure where this character appears on the map, plus conditional spawn and despawn
+              locations driven by gameplay state.
+            </p>
+            <CharacterMapSettingsPanel
+              characterId={character.id}
+              characterType={meta.characterType}
+              activeLocation={meta.activeLocation}
+              spawnLocationRules={meta.spawnLocationRules}
+              despawnLocationRules={meta.despawnLocationRules}
+              onChange={(patch) => updateMeta(character.id, patch)}
+              onClearActiveLocation={() => {
+                if (isUniqueNpcCharacter(meta.characterType)) {
+                  useEditorStore.getState().removeCharacterGridPlacement(character.id)
+                }
+              }}
+            />
           </>
         )
 
@@ -413,10 +509,24 @@ export function CharacterEditorView() {
     }
   }
 
-  return (
-    <AdminEditorShell listLabel="Characters" itemTitle={character.title} onBack={closeEntityEditor}>
-      <AdminSectionNav sections={[...CHARACTER_EDITOR_TABS]} active={activeTab} onChange={handleTabChange} />
+  const editorTabs = CHARACTER_EDITOR_TABS.filter(
+    (tab) => tab.id !== 'map' || characterSupportsMapLocations(meta.characterType),
+  )
+
+  const tabContent = (
+    <>
+      <AdminSectionNav sections={[...editorTabs]} active={activeTab} onChange={handleTabChange} />
       {renderTabContent()}
+    </>
+  )
+
+  if (variant === 'embedded') {
+    return <div className="admin-editor-embedded">{tabContent}</div>
+  }
+
+  return (
+    <AdminEditorShell listLabel="Characters" itemTitle={character.title} onBack={handleBack}>
+      {tabContent}
     </AdminEditorShell>
   )
 }

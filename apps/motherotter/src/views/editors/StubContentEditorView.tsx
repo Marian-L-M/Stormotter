@@ -38,7 +38,8 @@ export function StubContentEditorView({ type }: StubContentEditorViewProps) {
     )
   }
 
-  const listLabel = getEditorModeLabel(type)
+  const listLabel =
+    type === 'stories' ? 'Stories' : getEditorModeLabel(type as Parameters<typeof getEditorModeLabel>[0])
 
   function handleRemove() {
     if (!item) return

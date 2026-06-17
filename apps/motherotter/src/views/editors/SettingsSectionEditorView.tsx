@@ -10,6 +10,7 @@ import {
   normalizeMediaProjectSoftBudgetBytes,
 } from '../../admin/mediaTypes'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { MAP_RENDER_ENGINES } from '../../admin/renderEngineTypes'
 import { useEditorStore } from '../../store/editorStore'
 
 interface SettingsSectionEditorViewProps {
@@ -30,6 +31,8 @@ export function SettingsSectionEditorView({ sectionId }: SettingsSectionEditorVi
   const setMediaProjectSoftBudgetBytes = useEditorStore(
     (state) => state.setMediaProjectSoftBudgetBytes,
   )
+  const enabledMapRenderEngines = useEditorStore((state) => state.enabledMapRenderEngines)
+  const setEnabledMapRenderEngines = useEditorStore((state) => state.setEnabledMapRenderEngines)
   const markDirty = useEditorStore((state) => state.markDirty)
 
   if (sectionId === 'project-metadata') {
@@ -114,25 +117,69 @@ export function SettingsSectionEditorView({ sectionId }: SettingsSectionEditorVi
     )
   }
 
-  return (
-    <AdminEditorShell
-      listLabel="Settings"
-      itemTitle="Editor preferences"
-      onBack={closeEntityEditor}
-    >
-      <p className="admin-editor-lead">Applies to this browser installation of Motherotter.</p>
-      <label className="checkbox-field">
-        <input
-          type="checkbox"
-          checked={autosaveEnabled}
-          onChange={(event) => void setAutosaveEnabled(event.target.checked)}
-        />
-        <span>Autosave project changes</span>
-      </label>
-      <p className="field-hint">
-        When off, use Save in the toolbar. Switching tabs, layers, or tools does not count as
-        unsaved — only map cells and project metadata do.
-      </p>
-    </AdminEditorShell>
-  )
+  if (sectionId === 'render-engines') {
+    return (
+      <AdminEditorShell listLabel="Settings" itemTitle="Render engines" onBack={closeEntityEditor}>
+        <p className="admin-editor-lead">
+          Enable map render engines for this project. Maps are organized by engine in the Maps tab.
+        </p>
+        <fieldset className="render-engine-settings">
+          <legend className="admin-section-heading">Available engines</legend>
+          {MAP_RENDER_ENGINES.map((engine) => {
+            const checked = enabledMapRenderEngines.includes(engine.id)
+            const isOnlyEnabled = checked && enabledMapRenderEngines.length === 1
+            return (
+              <label key={engine.id} className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={isOnlyEnabled}
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      setEnabledMapRenderEngines([...enabledMapRenderEngines, engine.id])
+                    } else {
+                      setEnabledMapRenderEngines(
+                        enabledMapRenderEngines.filter((entry) => entry !== engine.id),
+                      )
+                    }
+                    markDirty()
+                  }}
+                />
+                <span>{engine.label}</span>
+              </label>
+            )
+          })}
+        </fieldset>
+        <p className="field-hint">
+          De-Otterer is the text-grid debug renderer used for map editing and tile icon previews.
+        </p>
+      </AdminEditorShell>
+    )
+  }
+
+  if (sectionId === 'editor-preferences') {
+    return (
+      <AdminEditorShell
+        listLabel="Settings"
+        itemTitle="Editor preferences"
+        onBack={closeEntityEditor}
+      >
+        <p className="admin-editor-lead">Applies to this browser installation of Motherotter.</p>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={autosaveEnabled}
+            onChange={(event) => void setAutosaveEnabled(event.target.checked)}
+          />
+          <span>Autosave project changes</span>
+        </label>
+        <p className="field-hint">
+          When off, use Save in the toolbar. Switching tabs, layers, or tools does not count as
+          unsaved — only map cells and project metadata do.
+        </p>
+      </AdminEditorShell>
+    )
+  }
+
+  return null
 }

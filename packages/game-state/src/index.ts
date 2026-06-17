@@ -13,5 +13,12 @@ export {
   loadGameFromDocument,
   worldFromMap,
 } from './load.js'
-export type { Cell, WorldModel } from './world.js'
+export type {
+  Cell,
+  EntranceTarget,
+  MapTile,
+  SpawnPointConfig,
+  SpawnPointEntityKind,
+  WorldModel,
+} from './world.js'
 export { cellKey, createEmptyWorld, getCellsInRect } from './world.js'

@@ -71,7 +71,11 @@ export type StubContentType =
   | 'abilities'
   | 'rules'
 
-export type SettingsSectionId = 'project-metadata' | 'editor-preferences' | 'media-library'
+export type SettingsSectionId =
+  | 'project-metadata'
+  | 'editor-preferences'
+  | 'media-library'
+  | 'render-engines'
 
 export interface SettingsSectionItem extends AdminListItem {
   id: SettingsSectionId

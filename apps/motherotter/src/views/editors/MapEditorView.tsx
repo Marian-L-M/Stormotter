@@ -1,94 +1,48 @@
-import { MapCanvas } from '../../components/MapCanvas'
-import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
-import { MediaPickerField } from '../../components/media/MediaPickerField'
-import { PLACEMENT_TOOLS, useEditorStore } from '../../store/editorStore'
+import { useState } from 'react'
+import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
+import { MapGridPanel } from '../../components/map/MapGridPanel'
+import { MapMetaPanel } from '../../components/map/MapMetaPanel'
+import { useEditorStore } from '../../store/editorStore'
+
+const MAP_EDITOR_TABS = [
+  { id: 'meta', label: 'Details' },
+  { id: 'grid', label: 'Grid' },
+] as const
+
+type MapEditorTab = (typeof MAP_EDITOR_TABS)[number]['id']
 
 export function MapEditorView() {
+  const [activeTab, setActiveTab] = useState<MapEditorTab>('grid')
+  const mapTitle = useEditorStore(
+    (state) => state.maps.find((map) => map.id === state.mapId)?.title ?? 'Untitled map',
+  )
   const mapId = useEditorStore((state) => state.mapId)
-  const title = useEditorStore((state) => state.title)
-  const world = useEditorStore((state) => state.world)
-  const activeLayer = useEditorStore((state) => state.activeLayer)
-  const selectedTool = useEditorStore((state) => state.selectedTool)
-  const mapBackdropMediaId = useEditorStore((state) => state.mapBackdropMediaId)
-  const setMapBackdropMediaId = useEditorStore((state) => state.setMapBackdropMediaId)
-  const markDirty = useEditorStore((state) => state.markDirty)
   const closeEntityEditor = useEditorStore((state) => state.closeEntityEditor)
-  const setActiveLayer = useEditorStore((state) => state.setActiveLayer)
-  const setSelectedTool = useEditorStore((state) => state.setSelectedTool)
+  const openMapPreview = useEditorStore((state) => state.openMapPreview)
 
   return (
-    <AdminEditorShell
-      listLabel="Maps"
-      itemTitle={`${title} (${mapId})`}
-      onBack={closeEntityEditor}
-    >
-      <p className="admin-editor-lead">
-        Place content on the grid for the active layer. Cells are stored sparsely.
-      </p>
-
-      <MediaPickerField
-        label="Map backdrop"
-        value={mapBackdropMediaId}
-        onChange={(mediaId) => {
-          setMapBackdropMediaId(mediaId)
-          markDirty()
-        }}
-        filter="image"
-        hint="Optional background image shown behind the map canvas."
-        modalTitle="Select map backdrop"
-      />
-
-      <div className="admin-editor-section">
-        <div className="panel-header">
-          <h3>Tools</h3>
-          <span className="muted">
-            {world.width}×{world.height} · {world.cells.size} cells
-          </span>
+    <div className="map-editor-fullpage">
+      <header className="map-editor-header">
+        <button type="button" className="map-editor-back-button" onClick={closeEntityEditor}>
+          ← Maps
+        </button>
+        <div className="map-editor-header-title">
+          <h1>{mapTitle}</h1>
+          <p className="field-hint">{mapId}</p>
         </div>
-        <div className="tool-grid">
-          {PLACEMENT_TOOLS.map((tool) => (
-            <button
-              key={tool.contentId}
-              type="button"
-              className={selectedTool === tool.contentId ? 'active' : undefined}
-              onClick={() => setSelectedTool(tool.contentId)}
-            >
-              <span className="tool-glyph">{tool.glyph}</span>
-              {tool.label}
-            </button>
-          ))}
-          <button
-            type="button"
-            className={selectedTool === 'erase' ? 'active' : undefined}
-            onClick={() => setSelectedTool('erase')}
-          >
-            <span className="tool-glyph">·</span>
-            Erase
-          </button>
-        </div>
+        <AdminSectionNav
+          sections={[...MAP_EDITOR_TABS]}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
+        <button type="button" className="admin-primary-button map-editor-preview-button" onClick={openMapPreview}>
+          Run preview
+        </button>
+      </header>
+
+      <div className="map-editor-body">
+        {activeTab === 'meta' ? <MapMetaPanel /> : <MapGridPanel />}
       </div>
-
-      <div className="admin-editor-section">
-        <div className="panel-header">
-          <h3>Layer</h3>
-        </div>
-        <div className="layer-tabs" role="tablist" aria-label="Map layers">
-          {world.layers.map((layer) => (
-            <button
-              key={layer}
-              type="button"
-              role="tab"
-              aria-selected={layer === activeLayer}
-              className={layer === activeLayer ? 'active' : undefined}
-              onClick={() => setActiveLayer(layer)}
-            >
-              {layer}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <MapCanvas />
-    </AdminEditorShell>
+    </div>
   )
 }

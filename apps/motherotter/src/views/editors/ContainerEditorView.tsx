@@ -14,21 +14,33 @@ import { useContainersStore } from '../../store/containersStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useEditorStore } from '../../store/editorStore'
 
-export function ContainerEditorView() {
+interface ContainerEditorViewProps {
+  overrideEntityId?: string
+  variant?: 'page' | 'embedded'
+  onBack?: () => void
+}
+
+export function ContainerEditorView({
+  overrideEntityId,
+  variant = 'page',
+  onBack,
+}: ContainerEditorViewProps = {}) {
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId)
   const closeEntityEditor = useEditorStore((state) => state.closeEntityEditor)
+  const entityId = overrideEntityId ?? selectedEntityId
+  const handleBack = onBack ?? closeEntityEditor
   const container = useContainersStore((state) =>
-    selectedEntityId ? state.containers.find((entry) => entry.id === selectedEntityId) : undefined,
+    entityId ? state.containers.find((entry) => entry.id === entityId) : undefined,
   )
   const updateContainer = useContainersStore((state) => state.updateContainer)
   const removeContainer = useContainersStore((state) => state.removeContainer)
   const characters = useContentCatalogStore((state) => state.stubs.characters)
 
-  if (!selectedEntityId || !container) {
+  if (!entityId || !container) {
     return (
       <section className="editor-view">
         <p className="admin-empty">Container not found.</p>
-        <button type="button" onClick={closeEntityEditor}>
+        <button type="button" onClick={handleBack}>
           Back to list
         </button>
       </section>
@@ -43,15 +55,15 @@ export function ContainerEditorView() {
 
   function handleRemove() {
     removeContainer(container!.id)
-    closeEntityEditor()
+    if (variant === 'page') {
+      closeEntityEditor()
+    } else {
+      handleBack()
+    }
   }
 
-  return (
-    <AdminEditorShell
-      listLabel={CONTAINER_KIND_LABELS[container.kind]}
-      itemTitle={isCharacterSlot ? getCharacterSlotLabel(container.slotKey) : container.name}
-      onBack={closeEntityEditor}
-    >
+  const panel = (
+    <>
       <p className="admin-editor-lead">
         {container.kind === 'unique'
           ? 'Place specific unique item instances in this fixed container.'
@@ -137,6 +149,20 @@ export function ContainerEditorView() {
           </button>
         </div>
       ) : null}
+    </>
+  )
+
+  if (variant === 'embedded') {
+    return <div className="admin-editor-embedded">{panel}</div>
+  }
+
+  return (
+    <AdminEditorShell
+      listLabel={CONTAINER_KIND_LABELS[container.kind]}
+      itemTitle={isCharacterSlot ? getCharacterSlotLabel(container.slotKey) : container.name}
+      onBack={handleBack}
+    >
+      {panel}
     </AdminEditorShell>
   )
 }

@@ -1,7 +1,8 @@
 import {
-  normalizeCharacterCategory,
-  type CharacterCategory,
-} from '../admin/characterTypes'
+  normalizeCharacterLocationRules,
+  normalizeMapCellReference,
+} from '../admin/characterLocationTypes'
+import { normalizeCharacterCategory, type CharacterCategory } from '../admin/characterTypes'
 import type { CharacterClass } from '../admin/characterClassTypes'
 import { migrateLegacyCharacterClassId, normalizeCharacterClass } from '../admin/characterClassTypes'
 import type { CharacterLineageType } from '../admin/lineageTypes'
@@ -17,8 +18,18 @@ import { normalizeLevelAbilityGrants } from '../admin/levelGrantTypes'
 import { normalizeAbilitiesContent } from '../admin/abilityTypes'
 import { normalizeAttributesContent } from '../admin/attributeTypes'
 import { migrateStubToItem, normalizeItem } from '../admin/itemTypes'
+import { normalizeDialog, normalizeDialogCategory } from '../admin/dialogTypes'
+import { normalizeJournalCategory, normalizeJournalEntry } from '../admin/journalTypes'
+import { normalizeQuest, normalizeQuestCategory } from '../admin/questTypes'
+import { normalizeStoryline } from '../admin/storylineTypes'
 import { migrateStubToContainer, migrateLegacyContainers, normalizeContainer } from '../admin/containerTypes'
 import { normalizeAudioProfile } from '../admin/audioProfileTypes'
+import {
+  normalizeDeOttererIcon,
+  type DeOttererIcon,
+  type LegacyDeOttererIcon,
+} from '../admin/deOttererIconTypes'
+import { normalizeGameplaySettings } from '../admin/gameplaySettingsTypes'
 import { normalizeTaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem, StubContentType } from '../admin/types'
 import { useAbilitiesStore } from '../store/abilitiesStore'
@@ -29,10 +40,16 @@ import { useCharacterMetaStore } from '../store/characterMetaStore'
 import { useItemRegistrySettingsStore } from '../store/itemRegistrySettingsStore'
 import { useContentCatalogStore } from '../store/contentCatalogStore'
 import { useContainersStore } from '../store/containersStore'
+import { useDialogsStore } from '../store/dialogsStore'
+import { useJournalStore } from '../store/journalStore'
+import { useQuestsStore } from '../store/questsStore'
+import { useStorylinesStore } from '../store/storylinesStore'
 import { useItemsStore } from '../store/itemsStore'
 import { useLineageTypesStore } from '../store/lineageTypesStore'
 import { useMediaLibraryStore } from '../store/mediaLibraryStore'
 import { useStateVariablesStore } from '../store/stateVariablesStore'
+import { useGameplaySettingsStore } from '../store/gameplaySettingsStore'
+import { useDeOttererIconsStore } from '../store/deOttererIconsStore'
 import { getTaxonomySnapshot, useTaxonomyStore } from '../store/taxonomyStore'
 import { createDefaultProjectContent } from './defaultProjectContent'
 import type { ProjectContent, SerializedCatalogStubs, SerializedCharacter } from './projectRecord'
@@ -120,6 +137,13 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
       activeOffHandSlot: raw.activeOffHandSlot,
       derivedStatBases: raw.derivedStatBases,
       derivedStatModifiers: raw.derivedStatModifiers,
+      isMain: raw.isMain === true,
+      isInGroup: raw.isInGroup === true,
+      isGroupAddable: raw.isGroupAddable === true,
+      activeLocation: normalizeMapCellReference(raw.activeLocation),
+      spawnLocationRules: normalizeCharacterLocationRules(raw.spawnLocationRules),
+      despawnLocationRules: normalizeCharacterLocationRules(raw.despawnLocationRules),
+      renderer: raw.renderer,
     }
   }
 
@@ -144,6 +168,13 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
     activeOffHandSlot: raw.activeOffHandSlot,
     derivedStatBases: raw.derivedStatBases,
     derivedStatModifiers: raw.derivedStatModifiers,
+    isMain: raw.isMain === true,
+    isInGroup: raw.isInGroup === true,
+    isGroupAddable: raw.isGroupAddable === true,
+    activeLocation: normalizeMapCellReference(raw.activeLocation),
+    spawnLocationRules: normalizeCharacterLocationRules(raw.spawnLocationRules),
+    despawnLocationRules: normalizeCharacterLocationRules(raw.despawnLocationRules),
+    renderer: raw.renderer,
   }
 }
 
@@ -227,6 +258,25 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
     abilities,
     items: structuredClone(items),
     containers: structuredClone(containers),
+    dialogs: structuredClone((raw.dialogs ?? defaults.dialogs).map((entry) => normalizeDialog(entry))),
+    dialogCategories: structuredClone(
+      (raw.dialogCategories ?? defaults.dialogCategories).map((entry) => normalizeDialogCategory(entry)),
+    ),
+    quests: structuredClone((raw.quests ?? defaults.quests).map((entry) => normalizeQuest(entry))),
+    questCategories: structuredClone(
+      (raw.questCategories ?? defaults.questCategories).map((entry) => normalizeQuestCategory(entry)),
+    ),
+    journalEntries: structuredClone(
+      (raw.journalEntries ?? defaults.journalEntries).map((entry) => normalizeJournalEntry(entry)),
+    ),
+    journalCategories: structuredClone(
+      (raw.journalCategories ?? defaults.journalCategories).map((entry) =>
+        normalizeJournalCategory(entry),
+      ),
+    ),
+    storylines: structuredClone(
+      (raw.storylines ?? defaults.storylines).map((entry) => normalizeStoryline(entry)),
+    ),
     characters: structuredClone((raw.characters ?? defaults.characters).map(migrateCharacter)),
     catalogStubs,
     taxonomy: normalizeTaxonomyState(raw.taxonomy),
@@ -234,6 +284,12 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
       raw.itemCategorySlotSettings ?? defaults.itemCategorySlotSettings,
     ),
     itemClassSlotSettings: structuredClone(raw.itemClassSlotSettings ?? defaults.itemClassSlotSettings),
+    deOttererIcons: structuredClone(
+      (raw.deOttererIcons ?? defaults.deOttererIcons).map((icon) =>
+        normalizeDeOttererIcon(icon as LegacyDeOttererIcon | DeOttererIcon),
+      ),
+    ),
+    gameplaySettings: normalizeGameplaySettings(raw.gameplaySettings ?? defaults.gameplaySettings),
   }
 }
 
@@ -247,6 +303,13 @@ export function getProjectContent(): ProjectContent {
   const abilities = useAbilitiesStore.getState().getSnapshot()
   const items = useItemsStore.getState().items
   const containers = useContainersStore.getState().containers
+  const dialogs = useDialogsStore.getState().dialogs
+  const dialogCategories = useDialogsStore.getState().categories
+  const quests = useQuestsStore.getState().quests
+  const questCategories = useQuestsStore.getState().categories
+  const journalEntries = useJournalStore.getState().entries
+  const journalCategories = useJournalStore.getState().categories
+  const storylines = useStorylinesStore.getState().storylines
   const characters = useContentCatalogStore.getState().stubs.characters
   const meta = useCharacterMetaStore.getState().metaByCharacterId
   const itemRegistrySettings = useItemRegistrySettingsStore.getState()
@@ -270,6 +333,13 @@ export function getProjectContent(): ProjectContent {
     abilities: structuredClone(abilities),
     items: structuredClone(items),
     containers: structuredClone(containers),
+    dialogs: structuredClone(dialogs),
+    dialogCategories: structuredClone(dialogCategories),
+    quests: structuredClone(quests),
+    questCategories: structuredClone(questCategories),
+    journalEntries: structuredClone(journalEntries),
+    journalCategories: structuredClone(journalCategories),
+    storylines: structuredClone(storylines),
     characters: characters.map((character) => ({
       id: character.id,
       title: character.title,
@@ -291,11 +361,20 @@ export function getProjectContent(): ProjectContent {
       activeOffHandSlot: meta[character.id]?.activeOffHandSlot,
       derivedStatBases: meta[character.id]?.derivedStatBases,
       derivedStatModifiers: meta[character.id]?.derivedStatModifiers,
+      isMain: meta[character.id]?.isMain ?? false,
+      isInGroup: meta[character.id]?.isInGroup ?? false,
+      isGroupAddable: meta[character.id]?.isGroupAddable ?? false,
+      activeLocation: meta[character.id]?.activeLocation ?? null,
+      spawnLocationRules: meta[character.id]?.spawnLocationRules ?? [],
+      despawnLocationRules: meta[character.id]?.despawnLocationRules ?? [],
+      renderer: meta[character.id]?.renderer ?? {},
     })),
     catalogStubs,
     taxonomy: getTaxonomySnapshot(),
     itemCategorySlotSettings: structuredClone(itemRegistrySettings.categorySettings),
     itemClassSlotSettings: structuredClone(itemRegistrySettings.classSettings),
+    deOttererIcons: structuredClone(useDeOttererIconsStore.getState().customIcons),
+    gameplaySettings: structuredClone(useGameplaySettingsStore.getState().settings),
   }
 }
 
@@ -320,6 +399,10 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
   useAbilitiesStore.getState().replaceAll(content.abilities)
   useItemsStore.getState().replaceAll(content.items)
   useContainersStore.getState().replaceAll(content.containers)
+  useDialogsStore.getState().replaceAll(content.dialogs, content.dialogCategories)
+  useQuestsStore.getState().replaceAll(content.quests, content.questCategories)
+  useJournalStore.getState().replaceAll(content.journalEntries, content.journalCategories)
+  useStorylinesStore.getState().replaceAll(content.storylines, content.catalogStubs.stories)
   useContainersStore.getState().syncAllCharacterInventories(
     content.characters.map((character) => ({ id: character.id, title: character.title })),
   )
@@ -351,6 +434,13 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
           activeOffHandSlot: character.activeOffHandSlot ?? 0,
           derivedStatBases: character.derivedStatBases ?? {},
           derivedStatModifiers: character.derivedStatModifiers ?? {},
+          isMain: character.isMain ?? false,
+          isInGroup: character.isInGroup ?? false,
+          isGroupAddable: character.isGroupAddable ?? false,
+          activeLocation: character.activeLocation ?? null,
+          spawnLocationRules: character.spawnLocationRules ?? [],
+          despawnLocationRules: character.despawnLocationRules ?? [],
+          renderer: character.renderer ?? {},
         },
       ]),
     ),
@@ -360,6 +450,8 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
     categorySettings: content.itemCategorySlotSettings,
     classSettings: content.itemClassSlotSettings,
   })
+  useDeOttererIconsStore.getState().setCustomIcons(content.deOttererIcons)
+  useGameplaySettingsStore.getState().replaceAll(content.gameplaySettings)
 
   useTaxonomyStore.getState().replaceAll(content.taxonomy)
 }

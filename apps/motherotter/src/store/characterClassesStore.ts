@@ -26,6 +26,7 @@ function seedCharacterClass(
     hiddenInventoryActivatesUnequipped: null,
     derivedStatBases: {},
     derivedStatModifiers: {},
+    renderer: {},
     updatedAt: timestamp,
   }
 }
