@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import type { EntranceTarget } from '@otter/game-state'
 import { cellKey } from '@otter/game-state'
-import { useMediaAssetObjectUrl } from '../../../hooks/useMediaObjectUrl'
 import { parseContentId } from '../../../editorTools'
+import { filterBindingsByTrigger } from '../../../admin/animationBindingUtils'
+import {
+  collectCharacterAnimationBindings,
+  collectItemAnimationBindings,
+  collectWeaponAttackBindings,
+} from '../../../admin/animationDispatchUtils'
+import type { AnimationTrigger, AnimationBinding } from '../../../admin/animationTypes'
+import { useMediaAssetObjectUrl } from '../../../hooks/useMediaObjectUrl'
 import {
   PREVIEW_DUMMY_MAIN_ID,
   canMoveTo,
@@ -38,6 +45,8 @@ import { useGameplaySettingsStore } from '../../../store/gameplaySettingsStore'
 import { useItemsStore } from '../../../store/itemsStore'
 import { useContainersStore } from '../../../store/containersStore'
 import { useMapPreviewStore } from '../../../store/mapPreviewStore'
+import { useAnimationsStore } from '../../../store/animationsStore'
+import { useMapPreviewAnimationPlayback } from '../../../hooks/useMapPreviewAnimationPlayback'
 import { MapPreviewCanvas } from './MapPreviewCanvas'
 
 function keyToDirection(key: string): { dx: number; dy: number } | null {
@@ -139,6 +148,9 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
 
   const items = useItemsStore((state) => state.items)
   const containers = useContainersStore((state) => state.containers)
+  const animationDefinitions = useAnimationsStore((state) => state.definitions)
+  const mapEventBindings = useAnimationsStore((state) => state.mapEventBindings)
+  const { playBindings, buildContext } = useMapPreviewAnimationPlayback()
 
   const positions = useMapPreviewStore((state) => state.positions)
   const selectedCharacterId = useMapPreviewStore((state) => state.selectedCharacterId)
@@ -548,6 +560,73 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
     [appendTerminalLine, setLastInteraction],
   )
 
+  const triggerPreviewAnimations = useCallback(
+    async (
+      trigger: AnimationTrigger,
+      target: PreviewPosition | null,
+      extraBindings: AnimationBinding[] = [],
+    ) => {
+      if (!selectedCharacterId) return
+      const context = buildContext({
+        positions,
+        partyCharacterIds: party.members.map((member) => member.characterId),
+        mainCharacterIds: party.members.filter((member) => member.isMain).map((member) => member.characterId),
+        selectedCharacterId,
+        targetPosition: target,
+        mapId: previewMapId,
+        layer: activeLayer,
+      })
+
+      const characterBindings = selectedMember
+        ? collectCharacterAnimationBindings(trigger, {
+            abilityDefinitions,
+            assignedAbilityIds: selectedMember.abilityIds,
+            items,
+          })
+        : []
+
+      const bindings = [...characterBindings, ...extraBindings]
+      if (bindings.length === 0) return
+      await playBindings(bindings, animationDefinitions, context)
+    },
+    [
+      activeLayer,
+      abilityDefinitions,
+      animationDefinitions,
+      buildContext,
+      items,
+      party.members,
+      playBindings,
+      positions,
+      previewMapId,
+      selectedCharacterId,
+      selectedMember,
+    ],
+  )
+
+  const dispatchCellInteractionAnimations = useCallback(
+    async (target: PreviewPosition, previewWorld: typeof world) => {
+      const cell = previewWorld.cells.get(cellKey(target.x, target.y, target.layer))
+      if (!cell) return
+      const { kind, entityId } = parseContentId(cell.contentId)
+
+      if (kind === 'event') {
+        const bindings = filterBindingsByTrigger(mapEventBindings[entityId] ?? [], 'on_event')
+        await triggerPreviewAnimations('on_event', target, bindings)
+        return
+      }
+
+      if (kind === 'item') {
+        const item = items.find((entry) => entry.id === entityId)
+        if (item) {
+          const bindings = collectItemAnimationBindings(item, 'on_use')
+          await triggerPreviewAnimations('on_use', target, bindings)
+        }
+      }
+    },
+    [items, mapEventBindings, triggerPreviewAnimations],
+  )
+
   const handleInteractAtCell = useCallback(
     (target: PreviewPosition) => {
       if (!selectedCharacterId) return
@@ -574,8 +653,17 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
         return
       }
       handleInteract(interaction.message)
+      void dispatchCellInteractionAnimations(target, previewWorld)
     },
-    [applyEntranceTransition, characters, containers, handleInteract, items, selectedCharacterId],
+    [
+      applyEntranceTransition,
+      characters,
+      containers,
+      dispatchCellInteractionAnimations,
+      handleInteract,
+      items,
+      selectedCharacterId,
+    ],
   )
 
   const handlePlaceDummy = useCallback(
@@ -748,9 +836,25 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
                 return
               }
               handleInteract(interaction.message)
+              void dispatchCellInteractionAnimations(pos, previewWorld)
             }}
           >
             Interact
+          </button>
+          <button
+            type="button"
+            className="admin-secondary-button"
+            disabled={!selectedCharacterId || placingDummy}
+            onClick={() => {
+              if (!selectedCharacterId) return
+              const pos = positions[selectedCharacterId]
+              if (!pos || pos.mapId !== previewMapId) return
+              appendTerminalLine('combat', `${selectedMember?.title ?? 'Character'} attacks.`)
+              const weaponBindings = collectWeaponAttackBindings(items)
+              void triggerPreviewAnimations('on_attack', pos, weaponBindings)
+            }}
+          >
+            Attack
           </button>
           {party.needsDummyPlacement ? (
             <button
@@ -767,9 +871,11 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
               type="button"
               className="admin-secondary-button"
               disabled={placingDummy}
-              onClick={() =>
+              onClick={() => {
                 appendTerminalLine('action', `${selectedMember?.title} uses ${ability.name}.`)
-              }
+                const pos = selectedCharacterId ? positions[selectedCharacterId] ?? null : null
+                void triggerPreviewAnimations('on_use', pos)
+              }}
             >
               {ability.name}
             </button>

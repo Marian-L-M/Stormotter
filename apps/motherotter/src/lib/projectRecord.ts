@@ -5,6 +5,7 @@ import type { Quest, QuestCategory } from '../admin/questTypes'
 import type { Storyline } from '../admin/storylineTypes'
 import type { Item } from '../admin/itemTypes'
 import type { AbilitiesContent } from '../admin/abilityTypes'
+import type { AnimationsContent } from '../admin/animationTypes'
 import type { AttributesContent } from '../admin/attributeTypes'
 import type { AudioProfile } from '../admin/audioProfileTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
@@ -75,6 +76,7 @@ export interface ProjectContent {
   audioProfiles: AudioProfile[]
   attributes: AttributesContent
   abilities: AbilitiesContent
+  animations: AnimationsContent
   items: Item[]
   containers: Container[]
   dialogs: Dialog[]

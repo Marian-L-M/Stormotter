@@ -4553,3 +4553,345 @@ body {
   letter-spacing: 0.04em;
   color: #c9a227;
 }
+
+.animations-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.animation-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.animation-editor-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.animation-sequence-panel {
+  border: 1px solid #2a3544;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #121820;
+}
+
+.animation-sequence-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.animation-sequence-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.animation-sequence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.animation-sequence-item {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.animation-sequence-item-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #2a3544;
+  border-radius: 0.375rem;
+  background: #0f141c;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.animation-sequence-item-body:hover {
+  border-color: #4a6fa5;
+}
+
+.animation-sequence-item-index {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #243044;
+  font-size: 0.75rem;
+}
+
+.animation-sequence-item-title {
+  font-weight: 600;
+}
+
+.animation-sequence-item-meta {
+  font-size: 0.8125rem;
+  color: #9aa8bc;
+}
+
+.animation-sequence-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.animation-preview-panel {
+  position: sticky;
+  top: 1rem;
+  border: 1px solid #2a3544;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #121820;
+}
+
+.animation-preview-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.animation-preview-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.animation-preview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.animation-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: #c8d4e6;
+}
+
+.animation-preview-grid {
+  --animation-cell-size: 2rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--animation-grid-size), var(--animation-cell-size));
+  grid-template-rows: repeat(var(--animation-grid-size), var(--animation-cell-size));
+  gap: 1px;
+  width: fit-content;
+  background: #1a2433;
+  border: 1px solid #2a3544;
+}
+
+.animation-preview-cell {
+  width: var(--animation-cell-size);
+  height: var(--animation-cell-size);
+  background: #0d1218;
+}
+
+.animation-preview-marker,
+.animation-preview-sprite {
+  position: absolute;
+  left: calc(var(--cell-x) * (var(--animation-cell-size) + 1px));
+  top: calc(var(--cell-y) * (var(--animation-cell-size) + 1px));
+  width: var(--animation-cell-size);
+  height: var(--animation-cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.animation-preview-marker span {
+  font-size: 0.5625rem;
+  line-height: 1.1;
+  text-align: center;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+  background: rgba(15, 20, 28, 0.85);
+}
+
+.animation-preview-marker-main span {
+  color: #ffd166;
+}
+
+.animation-preview-marker-ally span {
+  color: #7ec8a3;
+}
+
+.animation-preview-marker-enemy span {
+  color: #e07a7a;
+}
+
+.animation-preview-marker-target span {
+  color: #8aa4ff;
+}
+
+.animation-preview-marker-acting span {
+  color: #d4a5ff;
+}
+
+.animation-preview-sprite {
+  z-index: 2;
+}
+
+.animation-preview-meta {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #9aa8bc;
+}
+
+.animation-step-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.animation-step-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.animation-step-timing-grid,
+.animation-step-audio-grid,
+.animation-anchor-fixed-grid,
+.animation-anchor-offset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.animation-anchor-fields {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid #2a3544;
+  border-radius: 0.375rem;
+}
+
+.animation-anchor-fields legend {
+  padding: 0 0.25rem;
+  font-size: 0.875rem;
+}
+
+.animation-icon-style-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #2a3544;
+  border-radius: 0.375rem;
+}
+
+.animation-icon-picker-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  color: #c8d4e6;
+}
+
+.animation-icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
+  gap: 0.375rem;
+  max-height: 8rem;
+  overflow: auto;
+}
+
+.animation-icon-picker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid #2a3544;
+  border-radius: 0.25rem;
+  background: #0f141c;
+  cursor: pointer;
+}
+
+.animation-icon-picker-button.is-active {
+  border-color: #4a6fa5;
+  background: #1a2433;
+}
+
+@media (max-width: 960px) {
+  .animation-editor-layout,
+  .animation-step-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .animation-preview-panel {
+    position: static;
+  }
+}
+
+.animation-bindings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.animation-binding-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 1.5fr) 5rem auto;
+  gap: 0.75rem;
+  align-items: end;
+  padding: 0.75rem;
+  border: 1px solid #2a3544;
+  border-radius: 0.375rem;
+  background: #0f141c;
+}
+
+.animation-binding-order-field input {
+  width: 100%;
+}
+
+.map-preview-viewport-inner {
+  position: relative;
+}
+
+.map-preview-animation-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.map-preview-animation-sprite {
+  position: absolute;
+  left: calc(2rem + var(--cell-x) * 2rem);
+  top: calc(1.25rem + var(--cell-y) * 2rem);
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+}
+
+@media (max-width: 960px) {
+  .animation-binding-row {
+    grid-template-columns: 1fr;
+  }
+}

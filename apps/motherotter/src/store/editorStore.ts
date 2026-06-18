@@ -27,6 +27,7 @@ import {
 import { packOtterfile, type OtterfileDocument } from '@otter/otterfile-core'
 import type { AttributeSource } from '../admin/attributeTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
+import type { AnimationRenderEngine } from '../admin/animationTypes'
 import type { ContainerSectionTab } from '../admin/containerTypes'
 import type { DialogSectionTab } from '../admin/dialogTypes'
 import type { ItemSectionTab } from '../admin/itemTypes'
@@ -119,6 +120,7 @@ export interface EditorState {
   questSectionTab: QuestSectionTab
   journalSectionTab: JournalSectionTab
   containerSectionTab: ContainerSectionTab
+  animationsRenderEngineTab: AnimationRenderEngine
   attributeSourceTab: AttributeSource
   editorScreen: EditorScreen
   mapPreviewOpen: boolean
@@ -158,6 +160,7 @@ export interface EditorState {
   setQuestSectionTab: (tab: QuestSectionTab) => void
   setJournalSectionTab: (tab: JournalSectionTab) => void
   setContainerSectionTab: (tab: ContainerSectionTab) => void
+  setAnimationsRenderEngineTab: (tab: AnimationRenderEngine) => void
   setAttributeSourceTab: (tab: AttributeSource) => void
   openEntityEditor: (id: string) => void
   closeEntityEditor: () => void
@@ -326,6 +329,7 @@ export const useEditorStore = create<EditorState>()(
     questSectionTab: 'quests' as QuestSectionTab,
     journalSectionTab: 'entries' as JournalSectionTab,
     containerSectionTab: 'unique' as ContainerSectionTab,
+    animationsRenderEngineTab: DEFAULT_MAP_RENDER_ENGINE,
     attributeSourceTab: 'standard' as AttributeSource,
     editorScreen: 'list',
     mapPreviewOpen: false,
@@ -544,6 +548,12 @@ export const useEditorStore = create<EditorState>()(
     setContainerSectionTab: (tab) => {
       set((state) => {
         state.containerSectionTab = tab
+      })
+    },
+
+    setAnimationsRenderEngineTab: (tab) => {
+      set((state) => {
+        state.animationsRenderEngineTab = tab
       })
     },
 

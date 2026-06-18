@@ -16,6 +16,7 @@ import { createDefaultHitDice, createEmptyBonusDice, normalizeDiceRoll, normaliz
 import { normalizeCharacterLevel } from '../admin/characterLevelTypes'
 import { normalizeLevelAbilityGrants } from '../admin/levelGrantTypes'
 import { normalizeAbilitiesContent } from '../admin/abilityTypes'
+import { normalizeAnimationsContent } from '../admin/animationTypes'
 import { normalizeAttributesContent } from '../admin/attributeTypes'
 import { migrateStubToItem, normalizeItem } from '../admin/itemTypes'
 import { normalizeDialog, normalizeDialogCategory } from '../admin/dialogTypes'
@@ -33,6 +34,7 @@ import { normalizeGameplaySettings } from '../admin/gameplaySettingsTypes'
 import { normalizeTaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem, StubContentType } from '../admin/types'
 import { useAbilitiesStore } from '../store/abilitiesStore'
+import { useAnimationsStore } from '../store/animationsStore'
 import { useAttributesStore } from '../store/attributesStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
@@ -256,6 +258,7 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
       ]),
     }),
     abilities,
+    animations: normalizeAnimationsContent(raw.animations ?? defaults.animations),
     items: structuredClone(items),
     containers: structuredClone(containers),
     dialogs: structuredClone((raw.dialogs ?? defaults.dialogs).map((entry) => normalizeDialog(entry))),
@@ -301,6 +304,7 @@ export function getProjectContent(): ProjectContent {
   const audioProfiles = useAudioProfilesStore.getState().audioProfiles
   const attributes = useAttributesStore.getState().getSnapshot()
   const abilities = useAbilitiesStore.getState().getSnapshot()
+  const animations = useAnimationsStore.getState().getSnapshot()
   const items = useItemsStore.getState().items
   const containers = useContainersStore.getState().containers
   const dialogs = useDialogsStore.getState().dialogs
@@ -331,6 +335,7 @@ export function getProjectContent(): ProjectContent {
     audioProfiles: structuredClone(audioProfiles),
     attributes: structuredClone(attributes),
     abilities: structuredClone(abilities),
+    animations: structuredClone(animations),
     items: structuredClone(items),
     containers: structuredClone(containers),
     dialogs: structuredClone(dialogs),
@@ -397,6 +402,7 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
   useAudioProfilesStore.getState().replaceAll(content.audioProfiles)
   useAttributesStore.getState().replaceAll(content.attributes)
   useAbilitiesStore.getState().replaceAll(content.abilities)
+  useAnimationsStore.getState().replaceAll(content.animations)
   useItemsStore.getState().replaceAll(content.items)
   useContainersStore.getState().replaceAll(content.containers)
   useDialogsStore.getState().replaceAll(content.dialogs, content.dialogCategories)

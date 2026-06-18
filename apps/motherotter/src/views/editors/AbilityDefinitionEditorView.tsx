@@ -1,4 +1,5 @@
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { AnimationBindingsEditor } from '../../components/admin/AnimationBindingsEditor'
 import { MechanicCompositionFields } from '../../components/admin/MechanicCompositionFields'
 import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -66,6 +67,15 @@ export function AbilityDefinitionEditorView() {
           }
         />
       </label>
+
+      <AnimationBindingsEditor
+        bindings={definition.animationBindings}
+        onChange={(animationBindings) =>
+          updateDefinition(definition.id, { animationBindings })
+        }
+        allowedTriggers={['on_use', 'on_attack', 'on_hit', 'on_miss', 'on_event', 'on_trigger']}
+        hint="Animations play when this ability is used in preview or combat. Same order plays in parallel."
+      />
 
       <div className="admin-editor-actions">
         <button type="button" className="admin-danger-button" onClick={handleRemove}>

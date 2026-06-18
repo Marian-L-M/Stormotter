@@ -1,6 +1,8 @@
 import { normalizeAllowedSlotTypes } from './slotRules'
-import type { AdminListItem } from './types'
+import type { AnimationBinding } from './animationTypes'
+import { normalizeAnimationBinding } from './animationTypes'
 import { normalizeItemEntityRenderer, type EntityRendererSettings } from './entityRendererTypes'
+import type { AdminListItem } from './types'
 
 // ---------------------------------------------------------------------------
 // Item section tabs (within Items mode)
@@ -638,6 +640,8 @@ export interface Item {
   actionSoundMediaId: string | null
   requirements: ItemRequirement[]
   effects: ItemEffect[]
+  countsAsWeapon: boolean
+  animationBindings: AnimationBinding[]
   renderer: EntityRendererSettings
   updatedAt: string
 }
@@ -661,6 +665,8 @@ export type ItemPatch = Partial<
     | 'actionSoundMediaId'
     | 'requirements'
     | 'effects'
+    | 'countsAsWeapon'
+    | 'animationBindings'
     | 'renderer'
   >
 >
@@ -701,6 +707,8 @@ export function createEmptyItem(name = 'Untitled item', scope: ItemScope = 'gene
     actionSoundMediaId: null,
     requirements: [],
     effects: [],
+    countsAsWeapon: false,
+    animationBindings: [],
     renderer: normalizeItemEntityRenderer(undefined),
     updatedAt: timestamp,
   }
@@ -776,6 +784,11 @@ function normalizeMediaId(raw: string | null | undefined): string | null {
   return typeof raw === 'string' && raw.length > 0 ? raw : null
 }
 
+function defaultCountsAsWeapon(categoryId: ItemCategoryId, raw: unknown): boolean {
+  if (typeof raw === 'boolean') return raw
+  return categoryId === 'weapon' || categoryId === 'ranged_weapon'
+}
+
 export function normalizeItem(raw: Partial<Item> & { id: string }): Item {
   const categoryId = isItemCategoryId(raw.categoryId ?? '') ? raw.categoryId! : 'miscellaneous'
   const classId = validateItemClassForCategory(raw.classId, categoryId)
@@ -803,6 +816,10 @@ export function normalizeItem(raw: Partial<Item> & { id: string }): Item {
     actionSoundMediaId: normalizeMediaId(raw.actionSoundMediaId),
     requirements: (raw.requirements ?? []).map((entry) => normalizeItemRequirement(entry)),
     effects: (raw.effects ?? []).map((entry) => normalizeItemEffect(entry)),
+    countsAsWeapon: defaultCountsAsWeapon(categoryId, raw.countsAsWeapon),
+    animationBindings: Array.isArray(raw.animationBindings)
+      ? raw.animationBindings.map((entry) => normalizeAnimationBinding(entry))
+      : [],
     renderer: normalizeItemEntityRenderer(raw.renderer),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }

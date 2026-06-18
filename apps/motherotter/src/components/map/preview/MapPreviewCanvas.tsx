@@ -24,6 +24,7 @@ import { useCharacterMetaStore } from '../../../store/characterMetaStore'
 import { useDeOttererIconsStore } from '../../../store/deOttererIconsStore'
 import { useItemsStore } from '../../../store/itemsStore'
 import { useMapPreviewStore } from '../../../store/mapPreviewStore'
+import { MapPreviewAnimationOverlay } from './MapPreviewAnimationOverlay'
 
 interface MapPreviewCanvasProps {
   world: WorldModel
@@ -290,6 +291,7 @@ export function MapPreviewCanvas({
           style={{ transform: `translate(${-viewportPan.x}px, ${-viewportPan.y}px)` }}
         >
           <div ref={hostRef} className="renderer-host map-preview-renderer-host" />
+          <MapPreviewAnimationOverlay />
         </div>
       </div>
       {placingDummy ? (

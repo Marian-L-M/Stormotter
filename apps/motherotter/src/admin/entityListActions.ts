@@ -46,6 +46,8 @@ export function duplicateItemRecord(source: Item): string {
     actionSoundMediaId: source.actionSoundMediaId,
     requirements: structuredClone(source.requirements),
     effects: structuredClone(source.effects),
+    countsAsWeapon: source.countsAsWeapon,
+    animationBindings: structuredClone(source.animationBindings),
     containerId: null,
   })
   useAttributesStore.getState().copyEntityAttributes(source.id, newId)

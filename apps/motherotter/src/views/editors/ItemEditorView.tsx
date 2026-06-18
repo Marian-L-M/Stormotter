@@ -7,6 +7,7 @@ import { ItemEffectsEditor } from '../../components/admin/ItemEffectsEditor'
 import { ItemRequirementsEditor } from '../../components/admin/ItemRequirementsEditor'
 import { EntityRendererEditorPanel } from '../../components/admin/EntityRendererEditorPanel'
 import { AllowedSlotTypesEditor } from '../../components/admin/AllowedSlotTypesEditor'
+import { AnimationBindingsEditor } from '../../components/admin/AnimationBindingsEditor'
 import { MediaPickerField } from '../../components/media/MediaPickerField'
 import {
   ITEM_CATEGORIES,
@@ -182,6 +183,15 @@ export function ItemEditorView({
               />
             </label>
 
+            <label className="admin-checkbox-field">
+              <input
+                type="checkbox"
+                checked={item.countsAsWeapon}
+                onChange={(event) => updateItem(item.id, { countsAsWeapon: event.target.checked })}
+              />
+              <span>Counts as weapon (On attack animations apply when equipped)</span>
+            </label>
+
             <div className="admin-form-grid">
               <label className="field">
                 <span>Item category</span>
@@ -329,6 +339,12 @@ export function ItemEditorView({
             <ItemEffectsEditor
               effects={item.effects}
               onChange={(effects) => updateItem(item.id, { effects })}
+            />
+            <AnimationBindingsEditor
+              bindings={item.animationBindings}
+              onChange={(animationBindings) => updateItem(item.id, { animationBindings })}
+              allowedTriggers={['on_use', 'on_attack', 'on_hit', 'on_miss', 'on_equip', 'on_unequip']}
+              hint="Attach reusable animations for item use, weapon swings, and equip events."
             />
           </>
         )

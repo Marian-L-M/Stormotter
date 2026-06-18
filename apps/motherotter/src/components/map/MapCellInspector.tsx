@@ -10,10 +10,12 @@ import { characterSupportsMapLocations, isUniqueNpcCharacter } from '../../admin
 import { formatCellCoordinate } from '../../admin/mapLayerUtils'
 import { useMediaAssetObjectUrl } from '../../hooks/useMediaObjectUrl'
 import { CharacterMapSettingsPanel } from '../admin/CharacterMapSettingsPanel'
+import { AnimationBindingsEditor } from '../admin/AnimationBindingsEditor'
 import { useCharacterMetaStore } from '../../store/characterMetaStore'
 import { useContainersStore } from '../../store/containersStore'
 import { useContentCatalogStore } from '../../store/contentCatalogStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useAnimationsStore } from '../../store/animationsStore'
 import { useItemsStore } from '../../store/itemsStore'
 import { useMediaLibraryStore } from '../../store/mediaLibraryStore'
 import { MapEntranceInspector } from './MapEntranceToolPanel'
@@ -39,6 +41,10 @@ export function MapCellInspector({ cell }: MapCellInspectorProps) {
   const containers = useContainersStore((state) => state.containers)
   const mediaAssets = useMediaLibraryStore((state) => state.assets)
 
+  const mapEventBindings = useAnimationsStore((state) =>
+    kind === 'event' ? (state.mapEventBindings[entityId] ?? []) : [],
+  )
+  const setMapEventBindings = useAnimationsStore((state) => state.setMapEventBindings)
   const clearSelectedMapCell = useEditorStore((state) => state.clearSelectedMapCell)
   const mapId = useEditorStore((state) => state.mapId)
   const world = useEditorStore((state) => state.world)
@@ -207,6 +213,18 @@ export function MapCellInspector({ cell }: MapCellInspectorProps) {
                 removeCharacterGridPlacement(entityId)
               }
             }}
+          />
+        ) : null}
+
+        {kind === 'event' ? (
+          <AnimationBindingsEditor
+            bindings={mapEventBindings}
+            onChange={(bindings) => {
+              setMapEventBindings(entityId, bindings)
+              markDirty()
+            }}
+            allowedTriggers={['on_event', 'on_trigger']}
+            hint="Animations fire when the player interacts with this map event in preview."
           />
         ) : null}
 

@@ -12,6 +12,7 @@ import { DeOttererIconLibraryView } from './DeOttererIconLibraryView'
 import { MediaLibraryTabView } from './MediaLibraryTabView'
 import { AttributesTabView } from './AttributesTabView'
 import { AbilitiesTabView } from './AbilitiesTabView'
+import { AnimationsTabView } from './AnimationsTabView'
 import { AudioProfilesTabView } from './AudioProfilesTabView'
 import { ItemsTabView } from './ItemsTabView'
 import { ContainersTabView } from './ContainersTabView'
@@ -137,6 +138,10 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
 
   if (mode === 'abilities') {
     return <AbilitiesTabView />
+  }
+
+  if (mode === 'animations') {
+    return <AnimationsTabView />
   }
 
   if (mode === 'triggers') {

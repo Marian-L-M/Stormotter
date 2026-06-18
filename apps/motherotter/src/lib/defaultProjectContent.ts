@@ -5,6 +5,7 @@ import { createDefaultStatRanges, createEmptyCharacterStats } from '../admin/lin
 import { createDefaultHitDice, createEmptyBonusDice } from '../admin/diceTypes'
 import { DEFAULT_CHARACTER_LEVEL } from '../admin/characterLevelTypes'
 import { createEmptyAbilitiesContent } from '../admin/abilityTypes'
+import { createEmptyAnimationsContent } from '../admin/animationTypes'
 import { createEmptyAttributesContent } from '../admin/attributeTypes'
 import { createEmptyItem } from '../admin/itemTypes'
 import { createEmptyContainer } from '../admin/containerTypes'
@@ -217,6 +218,7 @@ export function createDefaultProjectContent(): ProjectContent {
     audioProfiles: [],
     attributes: createEmptyAttributesContent(),
     abilities: createEmptyAbilitiesContent(),
+    animations: createEmptyAnimationsContent(),
     items: defaultItems(),
     containers: defaultContainers(),
     dialogs: defaultDialogs(),

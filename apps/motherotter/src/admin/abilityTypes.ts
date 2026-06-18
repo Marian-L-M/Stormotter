@@ -21,6 +21,8 @@ import {
   isItemTriggerId,
   type ItemTriggerId,
 } from './itemTypes'
+import type { AnimationBinding } from './animationTypes'
+import { normalizeAnimationBinding } from './animationTypes'
 import type { AdminListItem } from './types'
 import type { LevelAbilityGrant } from './levelGrantTypes'
 
@@ -40,6 +42,7 @@ export interface AbilityDefinition {
   categoryId: string | null
   description: string
   mechanic: MechanicComposition | null
+  animationBindings: AnimationBinding[]
   updatedAt: string
 }
 
@@ -61,7 +64,7 @@ export interface AbilitiesContent {
 }
 
 export type AbilityDefinitionPatch = Partial<
-  Pick<AbilityDefinition, 'name' | 'inputType' | 'description' | 'mechanic'>
+  Pick<AbilityDefinition, 'name' | 'inputType' | 'description' | 'mechanic' | 'animationBindings'>
 >
 
 export const ABILITY_INPUT_TYPE_LABELS: Record<AbilityInputType, string> = {
@@ -172,6 +175,9 @@ export function normalizeAbilityDefinition(
     categoryId,
     description: raw.description ?? '',
     mechanic: isActiveAbilityMechanic(mechanic) ? mechanic : null,
+    animationBindings: Array.isArray(raw.animationBindings)
+      ? raw.animationBindings.map((entry) => normalizeAnimationBinding(entry))
+      : [],
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }

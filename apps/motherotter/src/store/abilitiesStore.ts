@@ -165,6 +165,9 @@ export const useAbilitiesStore = create<AbilitiesState>()(
 
         if (patch.name !== undefined) definition.name = patch.name
         if (patch.description !== undefined) definition.description = patch.description
+        if (patch.animationBindings !== undefined) {
+          definition.animationBindings = patch.animationBindings.map((entry) => ({ ...entry }))
+        }
 
         const nextInputType = patch.inputType ?? definition.inputType
 

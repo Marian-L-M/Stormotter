@@ -21,6 +21,8 @@ import {
 import { useDialogsStore } from '../../store/dialogsStore'
 import { useJournalStore } from '../../store/journalStore'
 import { useQuestsStore } from '../../store/questsStore'
+import { useAnimationsStore } from '../../store/animationsStore'
+import { AnimationBindingsEditor } from './AnimationBindingsEditor'
 import { StorylineFlowListEditor } from './StorylineFlowListEditor'
 
 interface StorylineFlowVisualEditorProps {
@@ -343,6 +345,7 @@ export function StorylineFlowVisualEditor({ graph, onChange }: StorylineFlowVisu
               placeholder="storyline-hook-id"
             />
           </label>
+          <HookAnimationBindingsPanel hookId={node.hookId.trim()} />
           {renderContinueSelect(node)}
         </div>
       )
@@ -538,5 +541,25 @@ export function StorylineFlowVisualEditor({ graph, onChange }: StorylineFlowVisu
         onChange={patchGraph}
       />
     </div>
+  )
+}
+
+function HookAnimationBindingsPanel({ hookId }: { hookId: string }) {
+  const bindings = useAnimationsStore((state) => (hookId ? (state.hookBindings[hookId] ?? []) : []))
+  const setHookBindings = useAnimationsStore((state) => state.setHookBindings)
+
+  if (!hookId) {
+    return (
+      <p className="field-hint">Set a hook id to attach on_trigger animations for this storyline entry.</p>
+    )
+  }
+
+  return (
+    <AnimationBindingsEditor
+      bindings={bindings}
+      onChange={(next) => setHookBindings(hookId, next)}
+      allowedTriggers={['on_trigger', 'on_event']}
+      hint="Animations fire when this storyline hook is triggered in preview or runtime."
+    />
   )
 }
