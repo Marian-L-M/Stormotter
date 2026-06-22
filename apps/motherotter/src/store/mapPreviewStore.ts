@@ -52,6 +52,8 @@ interface MapPreviewState {
   appendTerminalLine: (kind: PreviewTerminalKind, text: string) => void
   setTerminalExpanded: (expanded: boolean) => void
   tickRound: (gameMinutesPerRound: number) => void
+  advanceElapsedGameMinutes: (minutes: number) => void
+  setElapsedGameMinutes: (minutes: number) => void
   setRoundElapsedMs: (ms: number) => void
   setLastInteraction: (text: string | null) => void
 }
@@ -257,6 +259,19 @@ export const useMapPreviewStore = create<MapPreviewState>()(
         state.terminalLines.push(
           createTerminalLine('system', `Round ${state.roundNumber} · +${gameMinutesPerRound} game minutes`),
         )
+      })
+    },
+
+    advanceElapsedGameMinutes: (minutes) => {
+      if (minutes <= 0) return
+      set((state) => {
+        state.elapsedGameMinutes += Math.floor(minutes)
+      })
+    },
+
+    setElapsedGameMinutes: (minutes) => {
+      set((state) => {
+        state.elapsedGameMinutes = Math.max(0, Math.floor(minutes))
       })
     },
 

@@ -1,6 +1,8 @@
 import type { OtterfileDocument, OtterMap } from '@otter/otterfile-core'
 import { unpackOtterfile } from '@otter/otterfile-core'
 import type { LoadedGame } from './game.js'
+import { normalizeGameCartridge } from './cartridge.js'
+import type { RestZone } from './castSlotTypes.js'
 import { cellKey, createEmptyWorld, type WorldModel } from './world.js'
 
 /** Build a sparse runtime world from a validated otterfile map. */
@@ -39,11 +41,22 @@ export function worldFromMap(map: OtterMap): WorldModel {
   return world
 }
 
+function restZoneFromMap(map: OtterMap): RestZone {
+  const zone = (map as OtterMap & { restZone?: RestZone }).restZone
+  if (zone === 'inn' || zone === 'inside' || zone === 'outside') return zone
+  return 'none'
+}
+
 /** Load all maps from a validated otterfile document into runtime world models. */
-export function loadGameFromDocument(document: OtterfileDocument): LoadedGame {
+export function loadGameFromDocument(
+  document: OtterfileDocument,
+  cartridge?: unknown,
+): LoadedGame {
   const maps = new Map<string, WorldModel>()
+  const mapRestZones = new Map<string, RestZone>()
   for (const map of document.maps) {
     maps.set(map.id, worldFromMap(map))
+    mapRestZones.set(map.id, restZoneFromMap(map))
   }
 
   return {
@@ -52,11 +65,14 @@ export function loadGameFromDocument(document: OtterfileDocument): LoadedGame {
     formatVersion: document.manifest.formatVersion,
     defaultMapId: document.manifest.defaultMapId,
     maps,
+    mapRestZones,
+    stateVariables: document.content.stateVariables,
+    cartridge: normalizeGameCartridge(cartridge),
   }
 }
 
 /** Unpack and load an otterfile zip container into runtime game state. */
 export async function loadGameFromBytes(bytes: Uint8Array): Promise<LoadedGame> {
-  const document = await unpackOtterfile(bytes)
-  return loadGameFromDocument(document)
+  const unpacked = await unpackOtterfile(bytes)
+  return loadGameFromDocument(unpacked.document, unpacked.cartridge)
 }

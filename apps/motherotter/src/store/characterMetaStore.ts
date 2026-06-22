@@ -37,15 +37,26 @@ import {
   normalizeCharacterEntityRenderer,
   type EntityRendererSettings,
 } from '../admin/entityRendererTypes'
+import {
+  normalizeCharacterProgression,
+  type CharacterProgression,
+} from '../admin/progressionTypes'
+import {
+  normalizeCharacterCastPreviewState,
+  type CharacterCastPreviewState,
+} from '../admin/abilityCastSlotTypes'
+import { syncLegacyLevelFields } from '../admin/progressionUtils'
 
 export interface CharacterMeta {
   characterType: CharacterCategory
   lineageTypeId: string | null
   classId: string | null
   level: number
+  progression: CharacterProgression
   levelAbilities: LevelAbilityGrant[]
   portraitMediaId: string | null
   audioProfileId: string | null
+  aiProfileId: string | null
   stats: CharacterStatValues
   hitPointSource: HitPointSource
   hitPointOverride: number | null
@@ -63,6 +74,8 @@ export interface CharacterMeta {
   spawnLocationRules: CharacterLocationRule[]
   despawnLocationRules: CharacterLocationRule[]
   renderer: EntityRendererSettings
+  /** Preview / save runtime cast slot assignments and rest clock */
+  castSlotPreview: CharacterCastPreviewState
 }
 
 const DEFAULT_META: CharacterMeta = {
@@ -70,9 +83,11 @@ const DEFAULT_META: CharacterMeta = {
   lineageTypeId: null,
   classId: null,
   level: DEFAULT_CHARACTER_LEVEL,
+  progression: normalizeCharacterProgression(undefined, null, DEFAULT_CHARACTER_LEVEL),
   levelAbilities: [],
   portraitMediaId: null,
   audioProfileId: null,
+  aiProfileId: null,
   stats: createEmptyCharacterStats(),
   hitPointSource: 'derived',
   hitPointOverride: null,
@@ -90,6 +105,7 @@ const DEFAULT_META: CharacterMeta = {
   spawnLocationRules: [],
   despawnLocationRules: [],
   renderer: {},
+  castSlotPreview: normalizeCharacterCastPreviewState(undefined),
 }
 
 export { DEFAULT_META }
@@ -108,7 +124,12 @@ function normalizeHandSlotIndex(raw: number | undefined, max: number): number {
 }
 
 function normalizeMeta(
-  raw: Partial<CharacterMeta> & { raceId?: string | null; classId?: string | null; audioMediaId?: string | null },
+  raw: Partial<CharacterMeta> & {
+    raceId?: string | null
+    classId?: string | null
+    audioMediaId?: string | null
+    progression?: Partial<CharacterProgression>
+  },
 ): CharacterMeta {
   const shared = {
     slotRules: normalizeSlotRules(raw.slotRules),
@@ -128,19 +149,31 @@ function normalizeMeta(
     spawnLocationRules: normalizeCharacterLocationRules(raw.spawnLocationRules),
     despawnLocationRules: normalizeCharacterLocationRules(raw.despawnLocationRules),
     renderer: normalizeCharacterEntityRenderer(raw.renderer),
+    castSlotPreview: normalizeCharacterCastPreviewState(raw.castSlotPreview),
   }
 
   const hasNewShape = raw.lineageTypeId !== undefined
+  const legacyClassId = hasNewShape
+    ? raw.classId
+      ? migrateLegacyCharacterClassId(raw.classId)
+      : null
+    : null
+  const legacyLevel = normalizeCharacterLevel(raw.level)
+  const progression = normalizeCharacterProgression(raw.progression, legacyClassId, legacyLevel)
+  const synced = syncLegacyLevelFields(progression)
+
   if (!hasNewShape) {
     const oldLink = raw.classId ?? raw.raceId ?? null
     return {
       characterType: normalizeCharacterCategory(raw.characterType ?? DEFAULT_CHARACTER_CATEGORY),
       lineageTypeId: oldLink ? migrateLegacyLineageId(oldLink) : null,
-      classId: null,
-      level: normalizeCharacterLevel(raw.level),
+      classId: synced.classId,
+      level: synced.level,
+      progression,
       levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities),
       portraitMediaId: raw.portraitMediaId ?? null,
       audioProfileId: raw.audioProfileId ?? null,
+      aiProfileId: raw.aiProfileId ?? null,
       stats: normalizeCharacterStats(raw.stats),
       hitPointSource: normalizeHitPointSource(raw.hitPointSource),
       hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
@@ -152,11 +185,13 @@ function normalizeMeta(
   return {
     characterType: normalizeCharacterCategory(raw.characterType ?? DEFAULT_CHARACTER_CATEGORY),
     lineageTypeId: raw.lineageTypeId ? migrateLegacyLineageId(raw.lineageTypeId) : null,
-    classId: raw.classId ? migrateLegacyCharacterClassId(raw.classId) : null,
-    level: normalizeCharacterLevel(raw.level),
+    classId: synced.classId,
+    level: synced.level,
+    progression,
     levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities),
     portraitMediaId: raw.portraitMediaId ?? null,
     audioProfileId: raw.audioProfileId ?? null,
+    aiProfileId: raw.aiProfileId ?? null,
     stats: normalizeCharacterStats(raw.stats),
     hitPointSource: normalizeHitPointSource(raw.hitPointSource),
     hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),

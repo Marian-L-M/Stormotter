@@ -74,7 +74,9 @@ import {
   type EditorMapEntry,
   type EditorSnapshot,
 } from '../lib/projectRepository'
+import { buildCartridgeFromStores } from '../lib/buildCartridge'
 import { createMapId } from '../lib/projectRecord'
+import { useStateVariablesStore } from './stateVariablesStore'
 
 export { MAP_TOOL_KINDS, type MapToolKind } from '../editorTools'
 
@@ -169,6 +171,7 @@ export interface EditorState {
   setGameId: (gameId: string) => void
   setTitle: (title: string) => void
   setMapTitle: (title: string) => void
+  setMapRestZone: (restZone: import('@otter/game-state').RestZone) => void
   addMap: () => void
   setActiveLayer: (layer: string) => void
   setMapToolKind: (kind: MapToolKind) => void
@@ -217,6 +220,7 @@ function flushActiveMapToCollection(state: EditorState) {
     id: state.mapId,
     title: state.maps[index]!.title,
     backdropMediaId: state.mapBackdropMediaId,
+    restZone: state.maps[index]!.restZone ?? 'none',
     world: cloneWorld(state.world),
   }
 }
@@ -292,6 +296,7 @@ function applySnapshot(
       id: entry.id,
       title: entry.title,
       backdropMediaId: entry.backdropMediaId,
+      restZone: entry.restZone ?? 'none',
       world: cloneWorld(entry.world) as unknown as typeof state.maps[number]['world'],
     }))
     assignWorld(state, snapshot.world)
@@ -618,6 +623,16 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    setMapRestZone: (restZone) => {
+      set((state) => {
+        const index = state.maps.findIndex((map) => map.id === state.mapId)
+        if (index >= 0) {
+          state.maps[index]!.restZone = restZone
+          state.isDirty = true
+        }
+      })
+    },
+
     addMap: () => {
       set((state) => {
         flushActiveMapToCollection(state)
@@ -626,6 +641,7 @@ export const useEditorStore = create<EditorState>()(
           id,
           title: `Map ${state.maps.length + 1}`,
           backdropMediaId: null,
+          restZone: 'none',
           world: createDefaultWorld() as unknown as typeof state.maps[number]['world'],
         })
         activateMapById(state, id)
@@ -1134,7 +1150,8 @@ export const useEditorStore = create<EditorState>()(
       get().markDirty()
     },
 
-    buildDocument: () => snapshotToDocument(getSnapshot(get())),
+    buildDocument: () =>
+      snapshotToDocument(getSnapshot(get()), useStateVariablesStore.getState().variables),
 
     exportOtterfile: async () => {
       set((state) => {
@@ -1143,7 +1160,9 @@ export const useEditorStore = create<EditorState>()(
 
       try {
         await get().persistCurrentProject()
-        const packed = await packOtterfile(get().buildDocument())
+        const snapshot = getSnapshot(get())
+        const cartridge = buildCartridgeFromStores(snapshotMapsForPersistence(snapshot))
+        const packed = await packOtterfile(get().buildDocument(), { cartridge })
         return packed.bytes
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Export failed'
@@ -1160,31 +1179,33 @@ export const useEditorStore = create<EditorState>()(
       })
 
       try {
-        const content = await contentFromBytes(bytes)
+        const { editor, stateVariables } = await contentFromBytes(bytes)
         set((state) => {
           state.hydrating = true
-          state.gameId = content.gameId
-          state.title = content.title
-          state.mapId = content.mapId
-          state.activeLayer = content.activeLayer
-          state.mapToolKind = content.mapToolKind
-          state.mapPlacementEntityId = content.mapPlacementEntityId
-          state.activeMode = content.activeMode
-          state.mapBackdropMediaId = content.mapBackdropMediaId
-          state.maps = content.maps.map((entry) => ({
+          state.gameId = editor.gameId
+          state.title = editor.title
+          state.mapId = editor.mapId
+          state.activeLayer = editor.activeLayer
+          state.mapToolKind = editor.mapToolKind
+          state.mapPlacementEntityId = editor.mapPlacementEntityId
+          state.activeMode = editor.activeMode
+          state.mapBackdropMediaId = editor.mapBackdropMediaId
+          state.maps = editor.maps.map((entry) => ({
             id: entry.id,
             title: entry.title,
             backdropMediaId: entry.backdropMediaId,
+            restZone: entry.restZone ?? 'none',
             world: cloneWorld(entry.world) as unknown as typeof state.maps[number]['world'],
           }))
-          assignWorld(state, content.world)
-          state.entranceDraft = createDefaultEntranceDraft(content.mapId, content.activeLayer)
-          state.spawnPointDraft = createDefaultSpawnPointDraft(content.mapId, content.activeLayer)
+          assignWorld(state, editor.world)
+          state.entranceDraft = createDefaultEntranceDraft(editor.mapId, editor.activeLayer)
+          state.spawnPointDraft = createDefaultSpawnPointDraft(editor.mapId, editor.activeLayer)
           state.selectedMapCellKey = null
           state.selectedTileKeys = []
           state.tileSelectionAnchorKey = null
           state.hydrating = false
         })
+        useStateVariablesStore.getState().replaceAll(stateVariables)
         await get().persistCurrentProject()
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Import failed'

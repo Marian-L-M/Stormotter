@@ -25,6 +25,21 @@ function sampleDocument(): OtterfileDocument {
         ],
       },
     ],
+    content: {
+      stateVariables: [
+        {
+          id: 'state-abc12345',
+          key: 'quest_stage',
+          title: 'Quest Stage',
+          scope: 'global',
+          varType: 'number',
+          defaultValue: 0,
+          characterId: null,
+          description: '',
+          updatedAt: '2026-06-20T00:00:00.000Z',
+        },
+      ],
+    },
   }
 }
 
@@ -51,6 +66,13 @@ describe('loadGameFromDocument', () => {
 
     const world = getActiveWorld(game)
     expect(world.cells.size).toBe(2)
+  })
+
+  it('carries authored state variables onto the loaded game', () => {
+    const game = loadGameFromDocument(sampleDocument())
+
+    expect(game.stateVariables).toHaveLength(1)
+    expect(game.stateVariables[0]?.key).toBe('quest_stage')
   })
 })
 

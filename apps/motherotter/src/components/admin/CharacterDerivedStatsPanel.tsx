@@ -14,6 +14,7 @@ import {
 import { LINEAGE_STAT_LABELS } from '../../admin/lineageTypes'
 import { resolveDerivedStats } from '../../admin/derivedStatResolver'
 import type { CharacterMeta } from '../../store/characterMetaStore'
+import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
 import { useContainersStore } from '../../store/containersStore'
@@ -60,6 +61,7 @@ function DerivedStatBreakdownRows({ characterId, meta, linkedLineageType, linked
   const levelAttributeGrants = useAttributesStore((state) => state.levelAttributeGrants)
   const abilityDefinitions = useAbilitiesStore((state) => state.definitions)
   const levelAbilityGrants = useAbilitiesStore((state) => state.levelAbilityGrants)
+  const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
   const containers = useContainersStore((state) => state.containers)
   const items = useItemsStore((state) => state.items)
 
@@ -70,6 +72,7 @@ function DerivedStatBreakdownRows({ characterId, meta, linkedLineageType, linked
         meta,
         lineageType: linkedLineageType,
         characterClass: linkedCharacterClass,
+        characterClasses,
         attributeDefinitions: definitions,
         entityValues,
         levelAttributeGrants,
@@ -83,6 +86,7 @@ function DerivedStatBreakdownRows({ characterId, meta, linkedLineageType, linked
       meta,
       linkedLineageType,
       linkedCharacterClass,
+      characterClasses,
       definitions,
       entityValues,
       levelAttributeGrants,

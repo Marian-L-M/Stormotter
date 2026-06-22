@@ -6,6 +6,10 @@ import {
 } from '../../admin/entityListActions'
 import type { LineageTypeListItem } from '../../admin/lineageTypes'
 import { formatStatRangesSummary } from '../../admin/lineageTypes'
+import {
+  summarizeAssignableAbilityGrants,
+  summarizeCastSlotGrants,
+} from '../../admin/abilityCastSlotTypes'
 import { summarizeLevelAbilityBindingGrants } from '../../admin/abilityTypes'
 import type { AdminColumn } from '../../admin/types'
 import { AdminListShell } from '../../components/admin/AdminListShell'
@@ -46,6 +50,12 @@ export function LineageTypesListView() {
       textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity('character-types', item.id).tags),
       textColumn('abilities', 'Abilities', (item) =>
         summarizeLevelAbilityBindingGrants(levelAbilityGrants[item.id] ?? []),
+      ),
+      textColumn('castSlots', 'Cast slots', (item) =>
+        summarizeCastSlotGrants(item.lineageType.castSlotGrants),
+      ),
+      textColumn('assignablePool', 'Assignable pool', (item) =>
+        summarizeAssignableAbilityGrants(item.lineageType.assignableAbilityGrants),
       ),
       textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
         getFilterValue: (item) => item.updatedAt,

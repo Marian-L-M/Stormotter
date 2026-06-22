@@ -16,6 +16,7 @@ import {
   type StackingRule,
   type ValueKind,
 } from '@otter/mechanics-core'
+import { normalizeDefinitionProgression, type DefinitionProgression } from './progressionTypes'
 
 export type {
   AttributeBinding,
@@ -92,6 +93,7 @@ export interface AttributeDefinition {
   description: string
   /** Composed mechanic axes; null = narrative / display only */
   mechanic: MechanicComposition | null
+  progression: DefinitionProgression
   updatedAt: string
 }
 
@@ -118,7 +120,7 @@ export interface AttributesContent {
 }
 
 export type AttributeDefinitionPatch = Partial<
-  Pick<AttributeDefinition, 'name' | 'inputType' | 'description' | 'mechanic'>
+  Pick<AttributeDefinition, 'name' | 'inputType' | 'description' | 'mechanic' | 'progression'>
 >
 
 export interface MechanicBuilderApplyResult {
@@ -419,6 +421,7 @@ export function normalizeAttributeDefinition(
     categoryId,
     description: raw.description ?? '',
     mechanic: isActiveMechanic(mechanic) ? mechanic : null,
+    progression: normalizeDefinitionProgression(raw.progression),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -720,6 +723,7 @@ export function stackAttributeValues(
     categoryId: null,
     description: '',
     mechanic: null,
+    progression: normalizeDefinitionProgression(undefined),
     updatedAt: '',
   }
   return stackDefinitionValues(pseudoDefinition, values)

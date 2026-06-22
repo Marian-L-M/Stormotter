@@ -24,11 +24,15 @@ import {
 } from './derivedStatTypes'
 import {
   collectActiveLevelAttributeValues,
-  stackDefinitionValues,
   type AttributeDefinition,
   type AttributeValue,
   type LevelAttributeGrant,
 } from './attributeTypes'
+import { totalCharacterLevel } from './progressionTypes'
+import {
+  resolveAbilityValueForCharacter,
+  resolveAttributeValueForCharacter,
+} from './progressionUtils'
 import type { MechanicComposition } from '@otter/mechanics-core'
 
 const EQUIPMENT_SLOT_GROUPS = new Set(['equipment', 'quick_bar', 'quiver'])
@@ -57,6 +61,7 @@ export interface ResolveDerivedStatsInput {
   meta: CharacterMeta
   lineageType: CharacterLineageType | undefined
   characterClass: CharacterClass | undefined
+  characterClasses?: CharacterClass[]
   attributeDefinitions: AttributeDefinition[]
   entityValues: Record<string, Record<string, AttributeValue>>
   levelAttributeGrants: Record<string, LevelAttributeGrant[]>
@@ -64,6 +69,116 @@ export interface ResolveDerivedStatsInput {
   levelAbilityGrants: Record<string, LevelAbilityBindingGrant[]>
   containers: Container[]
   items: Item[]
+}
+
+function buildClassById(
+  characterClass: CharacterClass | undefined,
+  characterClasses: CharacterClass[] | undefined,
+): Record<string, CharacterClass | undefined> {
+  const entries = characterClasses ?? (characterClass ? [characterClass] : [])
+  return Object.fromEntries(entries.map((entry) => [entry.id, entry]))
+}
+
+function collectLegacyAbilityValues(
+  definitionId: string,
+  characterId: string,
+  lineageTypeId: string | null,
+  progression: CharacterMeta['progression'],
+  totalLevel: number,
+  levelAbilityGrants: Record<string, LevelAbilityBindingGrant[]>,
+  itemIds: string[],
+): AbilityValue[] {
+  const values: AbilityValue[] = []
+  if (lineageTypeId) {
+    values.push(
+      ...collectActiveLevelAbilityValues(levelAbilityGrants[lineageTypeId], totalLevel, definitionId),
+    )
+  }
+  for (const track of progression.classes) {
+    values.push(
+      ...collectActiveLevelAbilityValues(
+        levelAbilityGrants[track.classId],
+        track.level,
+        definitionId,
+      ),
+    )
+  }
+  values.push(
+    ...collectActiveLevelAbilityValues(levelAbilityGrants[characterId], totalLevel, definitionId),
+  )
+  for (const itemId of itemIds) {
+    values.push(...collectActiveLevelAbilityValues(levelAbilityGrants[itemId], 1, definitionId))
+  }
+  return values
+}
+
+function collectLegacyAttributeValues(
+  definition: AttributeDefinition,
+  entityIds: string[],
+  entityValues: Record<string, Record<string, AttributeValue>>,
+  levelAttributeGrants: Record<string, LevelAttributeGrant[]>,
+  levelByEntityId: Record<string, number>,
+): AttributeValue[] {
+  const values: AttributeValue[] = []
+  for (const entityId of entityIds) {
+    const level = levelByEntityId[entityId] ?? 1
+    values.push(collectActiveLevelAttributeValues(levelAttributeGrants[entityId], level, definition))
+    const flat = entityValues[entityId]?.[definition.id]
+    if (flat !== undefined) values.push(flat)
+  }
+  return values
+}
+
+function resolveAbilityNumericForCharacter(
+  definition: AbilityDefinition,
+  characterId: string,
+  meta: CharacterMeta,
+  classById: Record<string, CharacterClass | undefined>,
+  levelAbilityGrants: Record<string, LevelAbilityBindingGrant[]>,
+  itemIds: string[],
+): number | null {
+  const totalLevel = totalCharacterLevel(meta.progression)
+  const legacyValues = collectLegacyAbilityValues(
+    definition.id,
+    characterId,
+    meta.lineageTypeId,
+    meta.progression,
+    totalLevel,
+    levelAbilityGrants,
+    itemIds,
+  )
+  const resolved = resolveAbilityValueForCharacter(
+    definition,
+    meta.progression,
+    classById,
+    legacyValues,
+  )
+  return asNumericAttributeValue(resolved ?? undefined)
+}
+
+function resolveAttributeNumericForCharacter(
+  definition: AttributeDefinition,
+  entityIds: string[],
+  entityValues: Record<string, Record<string, AttributeValue>>,
+  levelAttributeGrants: Record<string, LevelAttributeGrant[]>,
+  levelByEntityId: Record<string, number>,
+  meta: CharacterMeta,
+  classById: Record<string, CharacterClass | undefined>,
+): number | null {
+  const legacyValues = collectLegacyAttributeValues(
+    definition,
+    entityIds,
+    entityValues,
+    levelAttributeGrants,
+    levelByEntityId,
+  )
+  const resolved = resolveAttributeValueForCharacter(
+    definition,
+    meta.progression,
+    classById,
+    legacyValues,
+  )
+  return asNumericAttributeValue(resolved ?? undefined)
 }
 
 function derivedStatTargetFromMechanic(mechanic: MechanicComposition | null | undefined): DerivedStatKey | null {
@@ -90,70 +205,6 @@ function asNumericAttributeValue(value: AttributeValue | undefined): number | nu
   return null
 }
 
-function collectStatModifiersFromEntities(
-  definitions: AttributeDefinition[],
-  entityIds: string[],
-  entityValues: Record<string, Record<string, AttributeValue>>,
-  levelAttributeGrants: Record<string, LevelAttributeGrant[]>,
-  characterLevel: number,
-): Record<LineageStatKey, number> {
-  const totals = Object.fromEntries(LINEAGE_STAT_KEYS.map((stat) => [stat, 0])) as Record<
-    LineageStatKey,
-    number
-  >
-
-  for (const definition of definitions) {
-    if (definition.mechanic?.effectTypeId !== 'modifier' || !definition.mechanic.statId) continue
-    if (definition.mechanic.statId.startsWith(DERIVED_STAT_HANDLER_PREFIX)) continue
-    const statId = definition.mechanic.statId as LineageStatKey
-    if (!(statId in totals)) continue
-
-    const values: AttributeValue[] = []
-    for (const entityId of entityIds) {
-      const grants = levelAttributeGrants[entityId]
-      values.push(collectActiveLevelAttributeValues(grants, characterLevel, definition))
-      const flat = entityValues[entityId]?.[definition.id]
-      if (flat !== undefined) values.push(flat)
-    }
-
-    const stacked = stackDefinitionValues(definition, values)
-    const numeric = asNumericAttributeValue(stacked)
-    if (numeric !== null) totals[statId] += numeric
-  }
-
-  return totals
-}
-
-function collectDerivedStatModifiersFromEntities(
-  definitions: AttributeDefinition[],
-  entityIds: string[],
-  entityValues: Record<string, Record<string, AttributeValue>>,
-  levelAttributeGrants: Record<string, LevelAttributeGrant[]>,
-  characterLevel: number,
-): DerivedStatModifierMap {
-  const totals: DerivedStatModifierMap = {}
-
-  for (const definition of definitions) {
-    const target = derivedStatTargetFromMechanic(definition.mechanic)
-    if (!target) continue
-
-    const values: AttributeValue[] = []
-    for (const entityId of entityIds) {
-      const grants = levelAttributeGrants[entityId]
-      values.push(collectActiveLevelAttributeValues(grants, characterLevel, definition))
-      const flat = entityValues[entityId]?.[definition.id]
-      if (flat !== undefined) values.push(flat)
-    }
-
-    const stacked = stackDefinitionValues(definition, values)
-    const numeric = asNumericAttributeValue(stacked)
-    if (numeric === null) continue
-    totals[target] = (totals[target] ?? 0) + numeric
-  }
-
-  return totals
-}
-
 function getEquippedItemIds(characterId: string, containers: Container[], items: Item[]): string[] {
   const equipSlotKeys = new Set(
     CHARACTER_SLOT_DEFINITIONS.filter((entry) => EQUIPMENT_SLOT_GROUPS.has(entry.group)).map(
@@ -175,91 +226,6 @@ function getEquippedItemIds(characterId: string, containers: Container[], items:
   return items
     .filter((entry) => entry.containerId && equipContainerIds.has(entry.containerId))
     .map((entry) => entry.id)
-}
-
-function stackAbilityValues(
-  definition: AbilityDefinition,
-  values: (AbilityValue | undefined)[],
-): AbilityValue {
-  return stackDefinitionValues(definition as unknown as AttributeDefinition, values)
-}
-
-function collectStatModifiersFromAbilities(
-  definitions: AbilityDefinition[],
-  grantSources: Array<{ grants: LevelAbilityBindingGrant[] | undefined; level: number }>,
-): Record<LineageStatKey, number> {
-  const totals = Object.fromEntries(LINEAGE_STAT_KEYS.map((stat) => [stat, 0])) as Record<
-    LineageStatKey,
-    number
-  >
-
-  for (const definition of definitions) {
-    if (definition.mechanic?.effectTypeId !== 'modifier' || !definition.mechanic.statId) continue
-    if (definition.mechanic.statId.startsWith(DERIVED_STAT_HANDLER_PREFIX)) continue
-    const statId = definition.mechanic.statId as LineageStatKey
-    if (!(statId in totals)) continue
-
-    const values: AbilityValue[] = []
-    for (const source of grantSources) {
-      values.push(...collectActiveLevelAbilityValues(source.grants, source.level, definition.id))
-    }
-
-    const stacked = stackAbilityValues(definition, values)
-    const numeric = asNumericAttributeValue(stacked)
-    if (numeric !== null) totals[statId] += numeric
-  }
-
-  return totals
-}
-
-function collectDerivedStatModifiersFromAbilities(
-  definitions: AbilityDefinition[],
-  grantSources: Array<{ grants: LevelAbilityBindingGrant[] | undefined; level: number }>,
-): DerivedStatModifierMap {
-  const totals: DerivedStatModifierMap = {}
-
-  for (const definition of definitions) {
-    const target = derivedStatTargetFromMechanic(definition.mechanic)
-    if (!target) continue
-
-    const values: AbilityValue[] = []
-    for (const source of grantSources) {
-      values.push(...collectActiveLevelAbilityValues(source.grants, source.level, definition.id))
-    }
-
-    const stacked = stackAbilityValues(definition, values)
-    const numeric = asNumericAttributeValue(stacked)
-    if (numeric === null) continue
-    totals[target] = (totals[target] ?? 0) + numeric
-  }
-
-  return totals
-}
-
-function collectSaveBonusesFromAbilities(
-  definitions: AbilityDefinition[],
-  grantSources: Array<{ grants: LevelAbilityBindingGrant[] | undefined; level: number }>,
-): Record<string, number> {
-  const totals: Record<string, number> = {}
-
-  for (const definition of definitions) {
-    if (definition.mechanic?.effectTypeId !== 'saving_throw' || !definition.mechanic.saveTypeId) {
-      continue
-    }
-    const saveTypeId = definition.mechanic.saveTypeId
-
-    const values: AbilityValue[] = []
-    for (const source of grantSources) {
-      values.push(...collectActiveLevelAbilityValues(source.grants, source.level, definition.id))
-    }
-
-    const stacked = stackAbilityValues(definition, values)
-    const numeric = asNumericAttributeValue(stacked)
-    if (numeric === null) continue
-    totals[saveTypeId] = (totals[saveTypeId] ?? 0) + numeric
-  }
-
-  return totals
 }
 
 function computeEffectiveAbilityScores(
@@ -304,44 +270,13 @@ function computeStatModifierContribution(
   }
 }
 
-function collectSaveBonusesFromAttributes(
-  definitions: AttributeDefinition[],
-  entityIds: string[],
-  entityValues: Record<string, Record<string, AttributeValue>>,
-  levelAttributeGrants: Record<string, LevelAttributeGrant[]>,
-  characterLevel: number,
-): Record<string, number> {
-  const totals: Record<string, number> = {}
-
-  for (const definition of definitions) {
-    if (definition.mechanic?.effectTypeId !== 'saving_throw' || !definition.mechanic.saveTypeId) {
-      continue
-    }
-    const saveTypeId = definition.mechanic.saveTypeId
-
-    const values: AttributeValue[] = []
-    for (const entityId of entityIds) {
-      const grants = levelAttributeGrants[entityId]
-      values.push(collectActiveLevelAttributeValues(grants, characterLevel, definition))
-      const flat = entityValues[entityId]?.[definition.id]
-      if (flat !== undefined) values.push(flat)
-    }
-
-    const stacked = stackDefinitionValues(definition, values)
-    const numeric = asNumericAttributeValue(stacked)
-    if (numeric === null) continue
-    totals[saveTypeId] = (totals[saveTypeId] ?? 0) + numeric
-  }
-
-  return totals
-}
-
 export function resolveDerivedStats(input: ResolveDerivedStatsInput): ResolvedDerivedStats {
   const {
     characterId,
     meta,
     lineageType,
     characterClass,
+    characterClasses,
     attributeDefinitions,
     entityValues,
     levelAttributeGrants,
@@ -351,42 +286,72 @@ export function resolveDerivedStats(input: ResolveDerivedStatsInput): ResolvedDe
     items,
   } = input
 
-  const characterLevel = meta.level
+  const totalLevel = totalCharacterLevel(meta.progression)
   const typeId = meta.lineageTypeId
-  const classId = meta.classId
+  const classById = buildClassById(characterClass, characterClasses)
 
   const attributeEntityIds = [
     ...(typeId ? [typeId] : []),
-    ...(classId ? [classId] : []),
+    ...meta.progression.classes.map((track) => track.classId),
+    ...(meta.classId && !meta.progression.classes.some((track) => track.classId === meta.classId)
+      ? [meta.classId]
+      : []),
     characterId,
   ]
 
+  const levelByEntityId: Record<string, number> = {
+    [characterId]: totalLevel,
+  }
+  if (typeId) levelByEntityId[typeId] = totalLevel
+  for (const track of meta.progression.classes) {
+    levelByEntityId[track.classId] = track.level
+  }
+  if (meta.classId && levelByEntityId[meta.classId] === undefined) {
+    levelByEntityId[meta.classId] = totalLevel
+  }
+
   const itemIds = getEquippedItemIds(characterId, containers, items)
+  for (const itemId of itemIds) {
+    levelByEntityId[itemId] = 1
+  }
 
-  const abilityGrantSources = [
-    ...(typeId
-      ? [{ grants: levelAbilityGrants[typeId], level: characterLevel }]
-      : []),
-    ...(classId
-      ? [{ grants: levelAbilityGrants[classId], level: characterLevel }]
-      : []),
-    { grants: levelAbilityGrants[characterId], level: characterLevel },
-    ...itemIds.map((itemId) => ({ grants: levelAbilityGrants[itemId], level: 1 })),
-  ]
+  const attributeStatModifiers = Object.fromEntries(
+    LINEAGE_STAT_KEYS.map((stat) => [stat, 0]),
+  ) as Record<LineageStatKey, number>
 
-  const attributeStatModifiers = collectStatModifiersFromEntities(
-    attributeDefinitions,
-    [...attributeEntityIds, ...itemIds],
-    entityValues,
-    levelAttributeGrants,
-    characterLevel,
-  )
-  const abilityStatModifiers = collectStatModifiersFromAbilities(
-    abilityDefinitions,
-    abilityGrantSources,
-  )
-  for (const stat of LINEAGE_STAT_KEYS) {
-    attributeStatModifiers[stat] += abilityStatModifiers[stat] ?? 0
+  for (const definition of attributeDefinitions) {
+    if (definition.mechanic?.effectTypeId !== 'modifier' || !definition.mechanic.statId) continue
+    if (definition.mechanic.statId.startsWith(DERIVED_STAT_HANDLER_PREFIX)) continue
+    const statId = definition.mechanic.statId as LineageStatKey
+    if (!(statId in attributeStatModifiers)) continue
+
+    const coreNumeric = resolveAttributeNumericForCharacter(
+      definition,
+      [...attributeEntityIds, ...itemIds],
+      entityValues,
+      levelAttributeGrants,
+      levelByEntityId,
+      meta,
+      classById,
+    )
+    if (coreNumeric !== null) attributeStatModifiers[statId] += coreNumeric
+  }
+
+  for (const definition of abilityDefinitions) {
+    if (definition.mechanic?.effectTypeId !== 'modifier' || !definition.mechanic.statId) continue
+    if (definition.mechanic.statId.startsWith(DERIVED_STAT_HANDLER_PREFIX)) continue
+    const statId = definition.mechanic.statId as LineageStatKey
+    if (!(statId in attributeStatModifiers)) continue
+
+    const numeric = resolveAbilityNumericForCharacter(
+      definition,
+      characterId,
+      meta,
+      classById,
+      levelAbilityGrants,
+      itemIds,
+    )
+    if (numeric !== null) attributeStatModifiers[statId] += numeric
   }
 
   const effectiveAbilityScores = computeEffectiveAbilityScores(meta.stats, attributeStatModifiers)
@@ -402,37 +367,92 @@ export function resolveDerivedStats(input: ResolveDerivedStatsInput): ResolvedDe
   const classModifiers = characterClass?.derivedStatModifiers ?? {}
   const characterModifiers = meta.derivedStatModifiers ?? {}
 
-  const attributeDerivedFromCore = collectDerivedStatModifiersFromEntities(
-    attributeDefinitions,
-    attributeEntityIds,
-    entityValues,
-    levelAttributeGrants,
-    characterLevel,
-  )
-  const itemDerived = collectDerivedStatModifiersFromEntities(
-    attributeDefinitions,
-    itemIds,
-    entityValues,
-    levelAttributeGrants,
-    1,
-  )
-  const abilityDerived = collectDerivedStatModifiersFromAbilities(
-    abilityDefinitions,
-    abilityGrantSources,
-  )
+  const attributeDerivedFromCore: DerivedStatModifierMap = {}
+  for (const definition of attributeDefinitions) {
+    const target = derivedStatTargetFromMechanic(definition.mechanic)
+    if (!target) continue
+    const numeric = resolveAttributeNumericForCharacter(
+      definition,
+      attributeEntityIds,
+      entityValues,
+      levelAttributeGrants,
+      levelByEntityId,
+      meta,
+      classById,
+    )
+    if (numeric === null) continue
+    attributeDerivedFromCore[target] = (attributeDerivedFromCore[target] ?? 0) + numeric
+  }
 
-  const saveBonusEntityIds = [...attributeEntityIds, ...itemIds]
-  const saveBonusesFromAttributes = collectSaveBonusesFromAttributes(
-    attributeDefinitions,
-    saveBonusEntityIds,
-    entityValues,
-    levelAttributeGrants,
-    characterLevel,
-  )
-  const saveBonusesFromAbilities = collectSaveBonusesFromAbilities(
-    abilityDefinitions,
-    abilityGrantSources,
-  )
+  const itemDerived: DerivedStatModifierMap = {}
+  for (const definition of attributeDefinitions) {
+    const target = derivedStatTargetFromMechanic(definition.mechanic)
+    if (!target) continue
+    const numeric = resolveAttributeNumericForCharacter(
+      definition,
+      itemIds,
+      entityValues,
+      levelAttributeGrants,
+      levelByEntityId,
+      meta,
+      classById,
+    )
+    if (numeric === null) continue
+    itemDerived[target] = (itemDerived[target] ?? 0) + numeric
+  }
+
+  const abilityDerived: DerivedStatModifierMap = {}
+  for (const definition of abilityDefinitions) {
+    const target = derivedStatTargetFromMechanic(definition.mechanic)
+    if (!target) continue
+    const numeric = resolveAbilityNumericForCharacter(
+      definition,
+      characterId,
+      meta,
+      classById,
+      levelAbilityGrants,
+      itemIds,
+    )
+    if (numeric === null) continue
+    abilityDerived[target] = (abilityDerived[target] ?? 0) + numeric
+  }
+
+  const saveBonusesFromAttributes: Record<string, number> = {}
+  for (const definition of attributeDefinitions) {
+    if (definition.mechanic?.effectTypeId !== 'saving_throw' || !definition.mechanic.saveTypeId) {
+      continue
+    }
+    const saveTypeId = definition.mechanic.saveTypeId
+    const numeric = resolveAttributeNumericForCharacter(
+      definition,
+      [...attributeEntityIds, ...itemIds],
+      entityValues,
+      levelAttributeGrants,
+      levelByEntityId,
+      meta,
+      classById,
+    )
+    if (numeric === null) continue
+    saveBonusesFromAttributes[saveTypeId] = (saveBonusesFromAttributes[saveTypeId] ?? 0) + numeric
+  }
+
+  const saveBonusesFromAbilities: Record<string, number> = {}
+  for (const definition of abilityDefinitions) {
+    if (definition.mechanic?.effectTypeId !== 'saving_throw' || !definition.mechanic.saveTypeId) {
+      continue
+    }
+    const saveTypeId = definition.mechanic.saveTypeId
+    const numeric = resolveAbilityNumericForCharacter(
+      definition,
+      characterId,
+      meta,
+      classById,
+      levelAbilityGrants,
+      itemIds,
+    )
+    if (numeric === null) continue
+    saveBonusesFromAbilities[saveTypeId] = (saveBonusesFromAbilities[saveTypeId] ?? 0) + numeric
+  }
 
   const stats = {} as Record<DerivedStatKey, DerivedStatBreakdown>
 

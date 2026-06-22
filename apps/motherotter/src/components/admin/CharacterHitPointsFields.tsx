@@ -10,6 +10,7 @@ import {
   type HitPointSource,
 } from '../../admin/diceTypes'
 import { MAX_CHARACTER_LEVEL, normalizeCharacterLevel } from '../../admin/characterLevelTypes'
+import { totalCharacterLevel } from '../../admin/progressionTypes'
 import type { CharacterClass } from '../../admin/characterClassTypes'
 import type { CharacterLineageType } from '../../admin/lineageTypes'
 import type { CharacterMeta } from '../../store/characterMetaStore'
@@ -27,7 +28,7 @@ export function CharacterHitPointsFields({
   linkedLineageType,
   onChange,
 }: CharacterHitPointsFieldsProps) {
-  const level = normalizeCharacterLevel(meta.level)
+  const level = normalizeCharacterLevel(totalCharacterLevel(meta.progression))
   const source = normalizeHitPointSource(meta.hitPointSource)
   const classDice = linkedClass?.hitDice
   const raceDice = linkedLineageType?.hitPointBonusDice

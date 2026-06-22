@@ -3,6 +3,7 @@ import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
 import { EntityLevelAbilityFields } from '../../components/admin/EntityLevelAbilityFields'
 import { EntityLevelAttributeFields } from '../../components/admin/EntityLevelAttributeFields'
+import { ItemCastSlotsEditor } from '../../components/admin/ItemCastSlotsEditor'
 import { ItemEffectsEditor } from '../../components/admin/ItemEffectsEditor'
 import { ItemRequirementsEditor } from '../../components/admin/ItemRequirementsEditor'
 import { EntityRendererEditorPanel } from '../../components/admin/EntityRendererEditorPanel'
@@ -31,6 +32,7 @@ const ITEM_EDITOR_TABS = [
   { id: 'renderer', label: 'Renderer' },
   { id: 'attributes', label: 'Attributes' },
   { id: 'effects', label: 'Abilities & Effects' },
+  { id: 'cast', label: 'Cast slots' },
   { id: 'slots', label: 'Slots' },
 ] as const
 
@@ -347,6 +349,14 @@ export function ItemEditorView({
               hint="Attach reusable animations for item use, weapon swings, and equip events."
             />
           </>
+        )
+
+      case 'cast':
+        return (
+          <ItemCastSlotsEditor
+            item={item}
+            onChange={(patch) => updateItem(item.id, patch)}
+          />
         )
 
       case 'slots':

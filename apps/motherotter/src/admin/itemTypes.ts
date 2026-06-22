@@ -1,6 +1,12 @@
 import { normalizeAllowedSlotTypes } from './slotRules'
 import type { AnimationBinding } from './animationTypes'
 import { normalizeAnimationBinding } from './animationTypes'
+import {
+  normalizeAbilityCastSlotTemplate,
+  normalizeConsumableCastConfig,
+  type AbilityCastSlotTemplate,
+  type ConsumableCastConfig,
+} from './abilityCastSlotTypes'
 import { normalizeItemEntityRenderer, type EntityRendererSettings } from './entityRendererTypes'
 import type { AdminListItem } from './types'
 
@@ -643,6 +649,11 @@ export interface Item {
   countsAsWeapon: boolean
   animationBindings: AnimationBinding[]
   renderer: EntityRendererSettings
+  /** Reusable cast slots on equipped gear (wands, staves). */
+  castSlots: AbilityCastSlotTemplate[]
+  maxItemCharges: number | null
+  /** Scrolls/potions — cast from inventory or quick slot; destroyed at 0 charges. */
+  consumable: ConsumableCastConfig | null
   updatedAt: string
 }
 
@@ -668,6 +679,9 @@ export type ItemPatch = Partial<
     | 'countsAsWeapon'
     | 'animationBindings'
     | 'renderer'
+    | 'castSlots'
+    | 'maxItemCharges'
+    | 'consumable'
   >
 >
 
@@ -709,6 +723,9 @@ export function createEmptyItem(name = 'Untitled item', scope: ItemScope = 'gene
     effects: [],
     countsAsWeapon: false,
     animationBindings: [],
+    castSlots: [],
+    maxItemCharges: null,
+    consumable: null,
     renderer: normalizeItemEntityRenderer(undefined),
     updatedAt: timestamp,
   }
@@ -820,6 +837,14 @@ export function normalizeItem(raw: Partial<Item> & { id: string }): Item {
     animationBindings: Array.isArray(raw.animationBindings)
       ? raw.animationBindings.map((entry) => normalizeAnimationBinding(entry))
       : [],
+    castSlots: Array.isArray(raw.castSlots)
+      ? raw.castSlots.map((entry) => normalizeAbilityCastSlotTemplate(entry, raw.id, 'class'))
+      : [],
+    maxItemCharges:
+      typeof raw.maxItemCharges === 'number' && raw.maxItemCharges >= 0
+        ? Math.floor(raw.maxItemCharges)
+        : null,
+    consumable: normalizeConsumableCastConfig(raw.consumable),
     renderer: normalizeItemEntityRenderer(raw.renderer),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }

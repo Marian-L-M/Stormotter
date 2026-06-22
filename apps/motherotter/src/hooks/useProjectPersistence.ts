@@ -13,6 +13,7 @@ import { useQuestsStore } from '../store/questsStore'
 import { useStorylinesStore } from '../store/storylinesStore'
 import { useItemsStore } from '../store/itemsStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
+import { useAiProfilesStore } from '../store/aiProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useLineageTypesStore } from '../store/lineageTypesStore'
 import { useStateVariablesStore } from '../store/stateVariablesStore'
@@ -162,6 +163,16 @@ export function useProjectPersistence() {
       }
     })
 
+    const unsubscribeAiProfiles = useAiProfilesStore.subscribe(() => {
+      const state = useEditorStore.getState()
+      if (state.hydrating) return
+      const current = buildPersistState()
+      if (hasProjectContentChanges(current, previous)) {
+        previous = current
+        handleChange()
+      }
+    })
+
     const unsubscribeAttributes = useAttributesStore.subscribe(() => {
       const state = useEditorStore.getState()
       if (state.hydrating) return
@@ -225,6 +236,7 @@ export function useProjectPersistence() {
       unsubscribeCharacterClasses()
       unsubscribeMedia()
       unsubscribeAudioProfiles()
+      unsubscribeAiProfiles()
       unsubscribeAttributes()
       unsubscribeItems()
       unsubscribeContainers()

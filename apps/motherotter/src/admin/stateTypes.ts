@@ -1,22 +1,16 @@
-/** Story and narrative state — not battle/combat runtime. */
-export type StateVariableScope = 'global' | 'character'
+import type { StateVariable } from '@otter/otterfile-core'
 
-export type StateVariableType = 'boolean' | 'number' | 'string'
+/**
+ * Story and narrative state — not battle/combat runtime.
+ *
+ * The `StateVariable` shape is owned by `otterfile-core` (the cartridge schema
+ * authority); re-exported here so editor code keeps its existing import path.
+ */
+export type { StateVariable }
 
-export interface StateVariable {
-  id: string
-  /** Script key (slug), e.g. quest_stage */
-  key: string
-  /** Human-readable label in the editor */
-  title: string
-  scope: StateVariableScope
-  varType: StateVariableType
-  defaultValue: string | number | boolean
-  description: string
-  /** Character id when scope is character (links to Characters tab entry) */
-  characterId: string | null
-  updatedAt: string
-}
+export type StateVariableScope = StateVariable['scope']
+
+export type StateVariableType = StateVariable['varType']
 
 export interface StateVariableListItem {
   id: string

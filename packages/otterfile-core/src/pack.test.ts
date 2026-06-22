@@ -26,8 +26,21 @@ function sampleDocument(overrides: Partial<OtterfileDocument> = {}): OtterfileDo
         ],
       },
     ],
+    content: { stateVariables: [] },
     ...overrides,
   }
+}
+
+const sampleStateVariable = {
+  id: 'state-abc12345',
+  key: 'quest_stage',
+  title: 'Quest Stage',
+  scope: 'global' as const,
+  varType: 'number' as const,
+  defaultValue: 0,
+  characterId: null,
+  description: 'How far the main quest has progressed.',
+  updatedAt: '2026-06-20T00:00:00.000Z',
 }
 
 describe('packOtterfile / unpackOtterfile', () => {
@@ -38,7 +51,7 @@ describe('packOtterfile / unpackOtterfile', () => {
     expect(packed.bytes.byteLength).toBeGreaterThan(0)
 
     const restored = await unpackOtterfile(packed.bytes)
-    expect(restored).toEqual(source)
+    expect(restored.document).toEqual(source)
   })
 
   it('round-trips an empty map (zero occupied cells)', async () => {
@@ -55,7 +68,7 @@ describe('packOtterfile / unpackOtterfile', () => {
     })
 
     const restored = await unpackOtterfile((await packOtterfile(source)).bytes)
-    expect(restored).toEqual(source)
+    expect(restored.document).toEqual(source)
   })
 
   it('writes manifest.json and maps/*.json into the zip container', async () => {
@@ -64,7 +77,46 @@ describe('packOtterfile / unpackOtterfile', () => {
 
     expect(zip.file('manifest.json')).not.toBeNull()
     expect(zip.file('maps/main.json')).not.toBeNull()
+    expect(zip.file('content/state-variables.json')).not.toBeNull()
     expect(zip.folder('assets')).not.toBeNull()
+  })
+
+  it('round-trips authored state variables through content/', async () => {
+    const source = sampleDocument({ content: { stateVariables: [sampleStateVariable] } })
+
+    const restored = await unpackOtterfile((await packOtterfile(source)).bytes)
+    expect(restored.document.content.stateVariables).toEqual([sampleStateVariable])
+  })
+
+  it('rejects state variables with the wrong shape on unpack', async () => {
+    const packed = await packOtterfile(sampleDocument())
+    const zip = await JSZip.loadAsync(packed.bytes)
+    zip.file('content/state-variables.json', JSON.stringify([{ id: 'x', varType: 'wizard' }]))
+
+    await expect(unpackOtterfile(await zip.generateAsync({ type: 'uint8array' }))).rejects.toThrow(
+      OtterfileError,
+    )
+  })
+
+  it('migrates a 0.1.0 cartridge (no content/) to current version with empty content', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'manifest.json',
+      JSON.stringify({
+        formatVersion: '0.1.0',
+        gameId: 'demo-game',
+        title: 'Demo',
+        defaultMapId: 'main',
+      }),
+    )
+    zip.file(
+      'maps/main.json',
+      JSON.stringify({ id: 'main', width: 4, height: 4, layers: ['ground'], cells: [] }),
+    )
+
+    const restored = await unpackOtterfile(await zip.generateAsync({ type: 'uint8array' }))
+    expect(restored.document.manifest.formatVersion).toBe(FORMAT_VERSION)
+    expect(restored.document.content.stateVariables).toEqual([])
   })
 
   it('stamps the runtime formatVersion on pack', async () => {
@@ -78,7 +130,7 @@ describe('packOtterfile / unpackOtterfile', () => {
     })
 
     const restored = await unpackOtterfile((await packOtterfile(source)).bytes)
-    expect(restored.manifest.formatVersion).toBe(FORMAT_VERSION)
+    expect(restored.document.manifest.formatVersion).toBe(FORMAT_VERSION)
   })
 
   it('rejects duplicate cells at the same coordinate and layer', async () => {

@@ -28,12 +28,14 @@
 
 > Goal: everything the editor authors travels inside the `.otterfile`. The schema authority moves from `apps/motherotter/src/admin/*` into `otterfile-core`. Do ONE domain end-to-end first to prove the pattern, then repeat.
 
-### 1a. Prove the pattern with state variables (smallest domain)
-- [ ] Add `stateVariableSchema` (Zod) to `otterfile-core/src/schemas.ts`; export inferred type
-- [ ] Extend `otterfileDocumentSchema` with optional `content.stateVariables`; add `content/state-variables.json` to `pack.ts`/`unpack` (missing file ⇒ empty array, so v1 files still parse)
-- [ ] Bump `FORMAT_VERSION` to 0.2.0; implement v0.1→v0.2 migration in `migrate.ts` (fill empty content); round-trip test with and without content
-- [ ] Motherotter: make `admin/stateTypes.ts` re-export the inferred type; wire `buildDocument()` / `importOtterfile*` in `editorStore.ts` to include/apply state variables
-- [ ] Gameotter: show loaded state variables (debug list is fine) to prove arrival
+### 1a. Prove the pattern with state variables (smallest domain) — ✅ done 2026-06-20
+- [x] Add `stateVariableSchema` (Zod) to `otterfile-core/src/schemas.ts`; export inferred type
+- [x] Extend `otterfileDocumentSchema` with `content.stateVariables` (`contentSchema`, defaults to `[]`); add `content/state-variables.json` to `pack.ts`/`unpack` (missing file ⇒ empty array, Zod-validated on read, so v1 files still parse)
+- [x] Bump `FORMAT_VERSION` to 0.2.0; implement v0.1→v0.2 migration in `migrate.ts`; round-trip + missing-content migration + bad-shape rejection tests
+- [x] Motherotter: `admin/stateTypes.ts` re-exports the inferred type; `buildDocument()` includes state variables; both `importOtterfile*` paths apply them
+- [x] Gameotter: loaded state variables shown as a debug list (`LoadedGame.stateVariables`)
+
+> Establishes the reusable `content/` plumbing every later slice repeats. NOTE: `otterfile-core` must be rebuilt (`pnpm --filter @otter/otterfile-core build`) when its types change — `game-state` typechecks against its `dist/`, not `src/`.
 
 ### 1b. Migrate the remaining domains (repeat the 1a pattern, one PR-sized change each)
 - [ ] Taxonomy (categories/tags) — second smallest, no cross-references

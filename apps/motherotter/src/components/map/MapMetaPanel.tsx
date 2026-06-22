@@ -24,7 +24,11 @@ export function MapMetaPanel() {
   const gameId = useEditorStore((state) => state.gameId)
   const world = useEditorStore((state) => state.world)
   const mapBackdropMediaId = useEditorStore((state) => state.mapBackdropMediaId)
+  const mapRestZone = useEditorStore(
+    (state) => state.maps.find((map) => map.id === state.mapId)?.restZone ?? 'none',
+  )
   const setMapTitle = useEditorStore((state) => state.setMapTitle)
+  const setMapRestZone = useEditorStore((state) => state.setMapRestZone)
   const setMapBackdropMediaId = useEditorStore((state) => state.setMapBackdropMediaId)
   const setWorldDimensions = useEditorStore((state) => state.setWorldDimensions)
   const markDirty = useEditorStore((state) => state.markDirty)
@@ -123,6 +127,25 @@ export function MapMetaPanel() {
             <label className="field">
               <span>Game id</span>
               <input value={gameId} readOnly />
+            </label>
+            <label className="field">
+              <span>Rest zone</span>
+              <select
+                className="admin-select admin-select-block"
+                value={mapRestZone}
+                onChange={(event) => {
+                  setMapRestZone(event.target.value as typeof mapRestZone)
+                  markDirty()
+                }}
+              >
+                <option value="none">None — rest forbidden</option>
+                <option value="inn">Inn — safe rest</option>
+                <option value="inside">Inside — safe rest</option>
+                <option value="outside">Outside — unsafe rest roll</option>
+              </select>
+              <span className="field-hint">
+                Controls whether party members can rest during map preview and in Gameotter.
+              </span>
             </label>
           </fieldset>
 

@@ -1,6 +1,7 @@
 import {
   ATTRIBUTE_SOURCE_LABELS,
 } from '../../admin/attributeTypes'
+import { DefinitionProgressionEditor } from '../../components/admin/DefinitionProgressionEditor'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
 import { MechanicCompositionFields } from '../../components/admin/MechanicCompositionFields'
 import { useAttributesStore } from '../../store/attributesStore'
@@ -73,6 +74,12 @@ export function AttributeDefinitionEditorView() {
           }
         />
       </label>
+
+      <DefinitionProgressionEditor
+        progression={definition.progression}
+        inputType={definition.inputType}
+        onChange={(progression) => updateDefinition(definition.id, { progression })}
+      />
 
       <div className="admin-editor-actions">
         <button type="button" className="admin-danger-button" onClick={handleRemove}>

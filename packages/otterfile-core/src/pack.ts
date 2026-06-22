@@ -1,6 +1,13 @@
 import JSZip from 'jszip'
 import { z } from 'zod'
-import { ASSETS_DIR, FORMAT_VERSION, MANIFEST_PATH, MAPS_DIR } from './constants.js'
+import {
+  ASSETS_DIR,
+  CARTRIDGE_PATH,
+  FORMAT_VERSION,
+  MANIFEST_PATH,
+  MAPS_DIR,
+  STATE_VARIABLES_PATH,
+} from './constants.js'
 import { migrateManifest, OtterfileUnsupportedVersionError } from './migrate.js'
 import {
   otterfileDocumentSchema,
@@ -8,7 +15,7 @@ import {
   parseMap,
   withCurrentFormatVersion,
 } from './schemas.js'
-import type { OtterfileDocument, PackedOtterfile } from './types.js'
+import type { OtterfileDocument, PackedOtterfile, UnpackedOtterfile } from './types.js'
 import { OtterfileError } from './types.js'
 
 function mapPath(mapId: string): string {
@@ -27,6 +34,7 @@ function formatZodError(error: z.ZodError): string {
 /** Validate and pack an otterfile document into a zip container. */
 export async function packOtterfile(
   document: OtterfileDocument,
+  options?: { cartridge?: unknown },
 ): Promise<PackedOtterfile> {
   let validated: OtterfileDocument
   try {
@@ -56,14 +64,23 @@ export async function packOtterfile(
     zip.file(mapPath(map.id), `${JSON.stringify(map, null, 2)}\n`)
   }
 
+  zip.file(
+    STATE_VARIABLES_PATH,
+    `${JSON.stringify(validated.content.stateVariables, null, 2)}\n`,
+  )
+
   zip.folder(ASSETS_DIR)
+
+  if (options?.cartridge !== undefined) {
+    zip.file(CARTRIDGE_PATH, `${JSON.stringify(options.cartridge, null, 2)}\n`)
+  }
 
   const bytes = await zip.generateAsync({ type: 'uint8array' })
   return { bytes }
 }
 
 /** Unpack and Zod-validate an otterfile zip container. */
-export async function unpackOtterfile(bytes: Uint8Array): Promise<OtterfileDocument> {
+export async function unpackOtterfile(bytes: Uint8Array): Promise<UnpackedOtterfile> {
   let zip: JSZip
   try {
     zip = await JSZip.loadAsync(bytes)
@@ -130,8 +147,32 @@ export async function unpackOtterfile(bytes: Uint8Array): Promise<OtterfileDocum
     }
   }
 
+  let stateVariablesRaw: unknown = []
+  const stateVariablesEntry = zip.file(STATE_VARIABLES_PATH)
+  if (stateVariablesEntry) {
+    try {
+      stateVariablesRaw = JSON.parse(await stateVariablesEntry.async('string'))
+    } catch (error) {
+      throw new OtterfileError(`Invalid JSON in "${STATE_VARIABLES_PATH}"`, { cause: error })
+    }
+  }
+
   try {
-    return otterfileDocumentSchema.parse({ manifest, maps })
+    const document = otterfileDocumentSchema.parse({
+      manifest,
+      maps,
+      content: { stateVariables: stateVariablesRaw },
+    })
+    const cartridgeEntry = zip.file(CARTRIDGE_PATH)
+    let cartridge: unknown | null = null
+    if (cartridgeEntry) {
+      try {
+        cartridge = JSON.parse(await cartridgeEntry.async('string'))
+      } catch (error) {
+        throw new OtterfileError(`Invalid JSON in "${CARTRIDGE_PATH}"`, { cause: error })
+      }
+    }
+    return { document, cartridge }
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new OtterfileError(`Invalid otterfile document: ${formatZodError(error)}`, {

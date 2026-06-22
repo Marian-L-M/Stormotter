@@ -26,6 +26,9 @@ function seedCharacterClass(
     hiddenInventoryActivatesUnequipped: null,
     derivedStatBases: {},
     derivedStatModifiers: {},
+    levelProgression: [],
+    castSlotGrants: [],
+    assignableAbilityGrants: [],
     renderer: {},
     updatedAt: timestamp,
   }
@@ -65,6 +68,16 @@ export const useCharacterClassesStore = create<CharacterClassesState>()(
           characterClass.distinctFeatures = patch.distinctFeatures
         }
         if (patch.levelAbilities !== undefined) characterClass.levelAbilities = patch.levelAbilities
+        if (patch.levelProgression !== undefined) characterClass.levelProgression = patch.levelProgression
+        if (patch.castSlotGrants !== undefined) characterClass.castSlotGrants = patch.castSlotGrants
+        if (patch.assignableAbilityGrants !== undefined) {
+          characterClass.assignableAbilityGrants = patch.assignableAbilityGrants
+        }
+        if (patch.derivedStatBases !== undefined) characterClass.derivedStatBases = patch.derivedStatBases
+        if (patch.derivedStatModifiers !== undefined) {
+          characterClass.derivedStatModifiers = patch.derivedStatModifiers
+        }
+        if (patch.renderer !== undefined) characterClass.renderer = patch.renderer
         if (patch.slotRules !== undefined) characterClass.slotRules = patch.slotRules
         if (patch.hiddenInventoryActivatesUnequipped !== undefined) {
           characterClass.hiddenInventoryActivatesUnequipped = patch.hiddenInventoryActivatesUnequipped

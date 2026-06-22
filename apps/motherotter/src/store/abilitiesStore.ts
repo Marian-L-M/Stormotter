@@ -168,6 +168,9 @@ export const useAbilitiesStore = create<AbilitiesState>()(
         if (patch.animationBindings !== undefined) {
           definition.animationBindings = patch.animationBindings.map((entry) => ({ ...entry }))
         }
+        if (patch.progression !== undefined) {
+          definition.progression = patch.progression
+        }
 
         const nextInputType = patch.inputType ?? definition.inputType
 

@@ -41,6 +41,12 @@ import { useCharacterMetaStore } from '../../../store/characterMetaStore'
 import { useContentCatalogStore } from '../../../store/contentCatalogStore'
 import { useEditorStore } from '../../../store/editorStore'
 import { resolvePreviewMapContext, resolveProjectMapEntry } from '../../../lib/projectRepository'
+import {
+  checkCharacterRestEligibility,
+  restCharacterCastSlots,
+  setCharacterCombatState,
+  setCharacterElapsedMinutes,
+} from '../../../lib/castSlotActions'
 import { useGameplaySettingsStore } from '../../../store/gameplaySettingsStore'
 import { useItemsStore } from '../../../store/itemsStore'
 import { useContainersStore } from '../../../store/containersStore'
@@ -144,6 +150,7 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
   const characters = useContentCatalogStore((state) => state.stubs.characters)
   const metaByCharacterId = useCharacterMetaStore((state) => state.metaByCharacterId)
   const abilityDefinitions = useAbilitiesStore((state) => state.definitions)
+  const levelAbilityGrants = useAbilitiesStore((state) => state.levelAbilityGrants)
   const settings = useGameplaySettingsStore((state) => state.settings)
 
   const items = useItemsStore((state) => state.items)
@@ -181,6 +188,8 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
   const consumeMovement = useMapPreviewStore((state) => state.consumeMovement)
   const setViewportFollowCharacter = useMapPreviewStore((state) => state.setViewportFollowCharacter)
   const appendTerminalLine = useMapPreviewStore((state) => state.appendTerminalLine)
+  const advanceElapsedGameMinutes = useMapPreviewStore((state) => state.advanceElapsedGameMinutes)
+  const setElapsedGameMinutes = useMapPreviewStore((state) => state.setElapsedGameMinutes)
   const setTerminalExpanded = useMapPreviewStore((state) => state.setTerminalExpanded)
   const setLastInteraction = useMapPreviewStore((state) => state.setLastInteraction)
 
@@ -204,11 +213,17 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
       ? editorBackdropMediaId
       : (previewContext.entry?.backdropMediaId ?? editorBackdropMediaId)
   const mapTitle = previewContext.entry?.title ?? previewMapId
+  const mapRestZone = previewContext.entry?.restZone ?? 'none'
 
   const party = useMemo(
-    () => resolvePreviewParty(characters, metaByCharacterId),
-    [characters, metaByCharacterId],
+    () => resolvePreviewParty(characters, metaByCharacterId, levelAbilityGrants),
+    [characters, metaByCharacterId, levelAbilityGrants],
   )
+
+  const mainCharacterId = party.mainCharacterId
+  const mainRestEligibility = mainCharacterId
+    ? checkCharacterRestEligibility(mainCharacterId, mapRestZone)
+    : { ok: false as const, reason: 'rest_forbidden' as const }
 
   const partyCharacterIds = useMemo(
     () => new Set(party.members.map((member) => member.characterId)),
@@ -285,6 +300,11 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
     const editor = useEditorStore.getState()
     resetForMap(editor.mapId)
 
+    const mainMeta = party.mainCharacterId ? metaByCharacterId[party.mainCharacterId] : undefined
+    if (mainMeta?.castSlotPreview) {
+      setElapsedGameMinutes(mainMeta.castSlotPreview.elapsedMinutes)
+    }
+
     const initialPositions: Record<string, PreviewPosition> = {}
     for (const member of party.members) {
       const spawn = resolveMemberSpawnPosition(
@@ -343,6 +363,10 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
         const previousElapsed = state.elapsedGameMinutes
         state.tickRound(settings.gameMinutesPerRound)
         state.setMovementBudgets(buildMovementBudgets(partyMemberIds, partyMovementSpeeds))
+        const mainId = party.mainCharacterId
+        if (mainId) {
+          setCharacterElapsedMinutes(mainId, useMapPreviewStore.getState().elapsedGameMinutes)
+        }
         const transition = describeTimeAdvance(
           previousElapsed,
           previousElapsed + settings.gameMinutesPerRound,
@@ -361,6 +385,8 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
     partyMovementSpeeds,
     settings.gameMinutesPerRound,
     settings.roundDurationSeconds,
+    party.mainCharacterId,
+    setCharacterElapsedMinutes,
   ])
 
   const applyEntranceTransition = useCallback(
@@ -804,6 +830,50 @@ export function MapPreviewPanel({ sessionKey }: { sessionKey: number }) {
             }}
           >
             Wait
+          </button>
+          <button
+            type="button"
+            className="admin-secondary-button"
+            disabled={!mainCharacterId || !mainRestEligibility.ok || mapRestZone === 'none'}
+            onClick={() => {
+              if (!mainCharacterId) return
+              const result = restCharacterCastSlots(mainCharacterId, {
+                restZone: mapRestZone,
+                onMinutesAdvanced: (minutes) => advanceElapsedGameMinutes(minutes),
+              })
+              appendTerminalLine(result.ok ? 'system' : 'combat', result.message)
+              if (result.hooks?.length) {
+                for (const hook of result.hooks) {
+                  appendTerminalLine('system', `[${hook}]`)
+                }
+              }
+            }}
+          >
+            Rest (8h)
+          </button>
+          <button
+            type="button"
+            className="admin-secondary-button"
+            disabled={!mainCharacterId}
+            onClick={() => {
+              if (!mainCharacterId) return
+              setCharacterCombatState(mainCharacterId, true)
+              appendTerminalLine('combat', 'Combat started — rest blocked.')
+            }}
+          >
+            Start combat
+          </button>
+          <button
+            type="button"
+            className="admin-secondary-button"
+            disabled={!mainCharacterId}
+            onClick={() => {
+              if (!mainCharacterId) return
+              setCharacterCombatState(mainCharacterId, false)
+              appendTerminalLine('combat', 'Combat ended — 30s cooldown before rest.')
+            }}
+          >
+            End combat
           </button>
           <button
             type="button"

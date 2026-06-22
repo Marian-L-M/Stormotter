@@ -13,6 +13,7 @@ import { MediaLibraryTabView } from './MediaLibraryTabView'
 import { AttributesTabView } from './AttributesTabView'
 import { AbilitiesTabView } from './AbilitiesTabView'
 import { AnimationsTabView } from './AnimationsTabView'
+import { AiTabView } from './AiTabView'
 import { AudioProfilesTabView } from './AudioProfilesTabView'
 import { ItemsTabView } from './ItemsTabView'
 import { ContainersTabView } from './ContainersTabView'
@@ -142,6 +143,10 @@ export function EditorModePanel({ mode }: EditorModePanelProps) {
 
   if (mode === 'animations') {
     return <AnimationsTabView />
+  }
+
+  if (mode === 'ai') {
+    return <AiTabView />
   }
 
   if (mode === 'triggers') {

@@ -23,6 +23,10 @@ import {
 } from './itemTypes'
 import type { AnimationBinding } from './animationTypes'
 import { normalizeAnimationBinding } from './animationTypes'
+import {
+  normalizeDefinitionProgression,
+  type DefinitionProgression,
+} from './progressionTypes'
 import type { AdminListItem } from './types'
 import type { LevelAbilityGrant } from './levelGrantTypes'
 
@@ -42,6 +46,7 @@ export interface AbilityDefinition {
   categoryId: string | null
   description: string
   mechanic: MechanicComposition | null
+  progression: DefinitionProgression
   animationBindings: AnimationBinding[]
   updatedAt: string
 }
@@ -64,7 +69,10 @@ export interface AbilitiesContent {
 }
 
 export type AbilityDefinitionPatch = Partial<
-  Pick<AbilityDefinition, 'name' | 'inputType' | 'description' | 'mechanic' | 'animationBindings'>
+  Pick<
+    AbilityDefinition,
+    'name' | 'inputType' | 'description' | 'mechanic' | 'animationBindings' | 'progression'
+  >
 >
 
 export const ABILITY_INPUT_TYPE_LABELS: Record<AbilityInputType, string> = {
@@ -175,6 +183,7 @@ export function normalizeAbilityDefinition(
     categoryId,
     description: raw.description ?? '',
     mechanic: isActiveAbilityMechanic(mechanic) ? mechanic : null,
+    progression: normalizeDefinitionProgression(raw.progression),
     animationBindings: Array.isArray(raw.animationBindings)
       ? raw.animationBindings.map((entry) => normalizeAnimationBinding(entry))
       : [],
@@ -259,6 +268,39 @@ export function collectActiveLevelAbilityBindings(
     }
   }
   return bindings
+}
+
+export function getActiveAbilityDefinitionIdsForCharacter(options: {
+  characterId: string
+  lineageTypeId: string | null
+  classes: Array<{ classId: string; level: number }>
+  totalLevel: number
+  levelAbilityGrants: Record<string, LevelAbilityBindingGrant[]>
+}): string[] {
+  const ids = new Set<string>()
+  if (options.lineageTypeId) {
+    for (const id of getActiveAbilityDefinitionIds(
+      options.levelAbilityGrants[options.lineageTypeId],
+      options.totalLevel,
+    )) {
+      ids.add(id)
+    }
+  }
+  for (const track of options.classes) {
+    for (const id of getActiveAbilityDefinitionIds(
+      options.levelAbilityGrants[track.classId],
+      track.level,
+    )) {
+      ids.add(id)
+    }
+  }
+  for (const id of getActiveAbilityDefinitionIds(
+    options.levelAbilityGrants[options.characterId],
+    options.totalLevel,
+  )) {
+    ids.add(id)
+  }
+  return [...ids]
 }
 
 export function summarizeLevelAbilityBindingGrants(grants: LevelAbilityBindingGrant[]): string {

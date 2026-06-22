@@ -5,6 +5,7 @@ import type { AdminTableFeatures, StubContentType } from './types'
 import { useAbilitiesStore } from '../store/abilitiesStore'
 import { useAttributesStore } from '../store/attributesStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
+import { useAiProfilesStore } from '../store/aiProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useCharacterMetaStore } from '../store/characterMetaStore'
 import { useContainersStore } from '../store/containersStore'
@@ -17,6 +18,7 @@ import { useItemsStore } from '../store/itemsStore'
 import { useLineageTypesStore } from '../store/lineageTypesStore'
 import { useStateVariablesStore } from '../store/stateVariablesStore'
 import { useTaxonomyStore } from '../store/taxonomyStore'
+import { remapCastSlotGrantsForEntity } from './abilityCastSlotTypes'
 
 function copySuffix(name: string): string {
   const trimmed = name.trim()
@@ -198,6 +200,8 @@ export function duplicateLineageTypeRecord(sourceId: string): string {
     hiddenInventoryActivatesUnequipped: source.hiddenInventoryActivatesUnequipped,
     derivedStatBases: structuredClone(source.derivedStatBases),
     derivedStatModifiers: structuredClone(source.derivedStatModifiers),
+    castSlotGrants: remapCastSlotGrantsForEntity(source.castSlotGrants, newId, 'type'),
+    assignableAbilityGrants: structuredClone(source.assignableAbilityGrants),
   })
   useAttributesStore.getState().copyEntityAttributes(sourceId, newId)
   useAbilitiesStore.getState().copyEntityAbilities(sourceId, newId)
@@ -225,6 +229,9 @@ export function duplicateCharacterClassRecord(sourceId: string): string {
     hiddenInventoryActivatesUnequipped: source.hiddenInventoryActivatesUnequipped,
     derivedStatBases: structuredClone(source.derivedStatBases),
     derivedStatModifiers: structuredClone(source.derivedStatModifiers),
+    levelProgression: structuredClone(source.levelProgression),
+    castSlotGrants: remapCastSlotGrantsForEntity(source.castSlotGrants, newId, 'class'),
+    assignableAbilityGrants: structuredClone(source.assignableAbilityGrants),
   })
   useAttributesStore.getState().copyEntityAttributes(sourceId, newId)
   useAbilitiesStore.getState().copyEntityAbilities(sourceId, newId)
@@ -277,6 +284,32 @@ export function duplicateAudioProfileRecord(sourceId: string): string {
     description: source.description,
     triggers: structuredClone(source.triggers),
     customTriggers: structuredClone(source.customTriggers),
+  })
+  return newId
+}
+
+export function deleteAiProfileRecord(id: string): void {
+  useAiProfilesStore.getState().removeAiProfile(id)
+  useTaxonomyStore.getState().removeEntity(id)
+}
+
+export function duplicateAiProfileRecord(sourceId: string): string {
+  const source = useAiProfilesStore.getState().getAiProfile(sourceId)
+  if (!source) return sourceId
+  const newId = useAiProfilesStore.getState().addAiProfile()
+  useAiProfilesStore.getState().updateAiProfile(newId, {
+    name: copySuffix(source.name),
+    description: source.description,
+    aggression: source.aggression,
+    retreatThreshold: source.retreatThreshold,
+    targetPriority: source.targetPriority,
+    abilityUsage: source.abilityUsage,
+    retreatBehavior: source.retreatBehavior,
+    weaponPreference: source.weaponPreference,
+    retreatFromMelee: source.retreatFromMelee,
+    prioritizeAbilities: source.prioritizeAbilities,
+    abilityPriorityIds: structuredClone(source.abilityPriorityIds),
+    phaseRules: structuredClone(source.phaseRules),
   })
   return newId
 }

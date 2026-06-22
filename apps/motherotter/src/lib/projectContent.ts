@@ -15,6 +15,9 @@ import {
 import { createDefaultHitDice, createEmptyBonusDice, normalizeDiceRoll, normalizeHitPointOverride, normalizeHitPointSource } from '../admin/diceTypes'
 import { normalizeCharacterLevel } from '../admin/characterLevelTypes'
 import { normalizeLevelAbilityGrants } from '../admin/levelGrantTypes'
+import { normalizeCharacterProgression } from '../admin/progressionTypes'
+import { normalizeCharacterCastPreviewState } from '../admin/abilityCastSlotTypes'
+import { syncLegacyLevelFields } from '../admin/progressionUtils'
 import { normalizeAbilitiesContent } from '../admin/abilityTypes'
 import { normalizeAnimationsContent } from '../admin/animationTypes'
 import { normalizeAttributesContent } from '../admin/attributeTypes'
@@ -25,6 +28,7 @@ import { normalizeQuest, normalizeQuestCategory } from '../admin/questTypes'
 import { normalizeStoryline } from '../admin/storylineTypes'
 import { migrateStubToContainer, migrateLegacyContainers, normalizeContainer } from '../admin/containerTypes'
 import { normalizeAudioProfile } from '../admin/audioProfileTypes'
+import { normalizeAiProfile } from '../admin/aiProfileTypes'
 import {
   normalizeDeOttererIcon,
   type DeOttererIcon,
@@ -37,6 +41,7 @@ import { useAbilitiesStore } from '../store/abilitiesStore'
 import { useAnimationsStore } from '../store/animationsStore'
 import { useAttributesStore } from '../store/attributesStore'
 import { useAudioProfilesStore } from '../store/audioProfilesStore'
+import { useAiProfilesStore } from '../store/aiProfilesStore'
 import { useCharacterClassesStore } from '../store/characterClassesStore'
 import { useCharacterMetaStore } from '../store/characterMetaStore'
 import { useItemRegistrySettingsStore } from '../store/itemRegistrySettingsStore'
@@ -116,50 +121,31 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
     : normalizeCharacterCategory(raw.category ?? 'user-generated')
 
   const hasNewShape = raw.lineageTypeId !== undefined
-  if (!hasNewShape) {
-    const oldLink = raw.classId ?? raw.raceId ?? null
-    return {
-      id: raw.id,
-      title: raw.title,
-      characterType,
-      updatedAt: raw.updatedAt,
-      lineageTypeId: oldLink ? migrateLegacyLineageId(oldLink) : null,
-      classId: null,
-      level: normalizeCharacterLevel(raw.level),
-      levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities),
-      portraitMediaId: raw.portraitMediaId ?? null,
-      audioProfileId: raw.audioProfileId ?? null,
-      stats: normalizeCharacterStats(raw.stats),
-      hitPointSource: normalizeHitPointSource(raw.hitPointSource),
-      hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
-      summary: raw.summary ?? '',
-      slotRules: raw.slotRules,
-      hiddenInventoryActivatesUnequipped: raw.hiddenInventoryActivatesUnequipped ?? null,
-      activeMainHandSlot: raw.activeMainHandSlot,
-      activeOffHandSlot: raw.activeOffHandSlot,
-      derivedStatBases: raw.derivedStatBases,
-      derivedStatModifiers: raw.derivedStatModifiers,
-      isMain: raw.isMain === true,
-      isInGroup: raw.isInGroup === true,
-      isGroupAddable: raw.isGroupAddable === true,
-      activeLocation: normalizeMapCellReference(raw.activeLocation),
-      spawnLocationRules: normalizeCharacterLocationRules(raw.spawnLocationRules),
-      despawnLocationRules: normalizeCharacterLocationRules(raw.despawnLocationRules),
-      renderer: raw.renderer,
-    }
-  }
+  const lineageTypeId = hasNewShape
+    ? raw.lineageTypeId
+      ? migrateLegacyLineageId(raw.lineageTypeId)
+      : null
+    : raw.classId ?? raw.raceId
+      ? migrateLegacyLineageId(raw.classId ?? raw.raceId ?? '')
+      : null
+  const classId = hasNewShape && raw.classId ? migrateLegacyCharacterClassId(raw.classId) : null
+  const level = normalizeCharacterLevel(raw.level)
+  const progression = normalizeCharacterProgression(raw.progression, classId, level)
+  const synced = syncLegacyLevelFields(progression)
 
   return {
     id: raw.id,
     title: raw.title,
     characterType,
     updatedAt: raw.updatedAt,
-    lineageTypeId: raw.lineageTypeId ? migrateLegacyLineageId(raw.lineageTypeId) : null,
-    classId: raw.classId ? migrateLegacyCharacterClassId(raw.classId) : null,
-    level: normalizeCharacterLevel(raw.level),
+    lineageTypeId,
+    classId: synced.classId,
+    level: synced.level,
+    progression,
     levelAbilities: normalizeLevelAbilityGrants(raw.levelAbilities),
     portraitMediaId: raw.portraitMediaId ?? null,
-    audioProfileId: raw.audioProfileId ?? null,
+    audioProfileId: raw.audioProfileId ?? raw.audioMediaId ?? null,
+    aiProfileId: raw.aiProfileId ?? null,
     stats: normalizeCharacterStats(raw.stats),
     hitPointSource: normalizeHitPointSource(raw.hitPointSource),
     hitPointOverride: normalizeHitPointOverride(raw.hitPointOverride),
@@ -177,6 +163,7 @@ function migrateCharacter(raw: RawCharacter): SerializedCharacter {
     spawnLocationRules: normalizeCharacterLocationRules(raw.spawnLocationRules),
     despawnLocationRules: normalizeCharacterLocationRules(raw.despawnLocationRules),
     renderer: raw.renderer,
+    castSlotPreview: normalizeCharacterCastPreviewState(raw.castSlotPreview),
   }
 }
 
@@ -250,6 +237,9 @@ export function normalizeProjectContent(raw: RawProjectContent | undefined): Pro
     audioProfiles: structuredClone(
       (raw.audioProfiles ?? defaults.audioProfiles).map((profile) => normalizeAudioProfile(profile)),
     ),
+    aiProfiles: structuredClone(
+      (raw.aiProfiles ?? defaults.aiProfiles).map((profile) => normalizeAiProfile(profile)),
+    ),
     attributes: normalizeAttributesContent(raw.attributes ?? defaults.attributes, {
       levelGrantEntityIds: new Set([
         ...characterTypes.map((entry) => entry.id),
@@ -302,6 +292,7 @@ export function getProjectContent(): ProjectContent {
   const characterClasses = useCharacterClassesStore.getState().characterClasses
   const mediaAssets = useMediaLibraryStore.getState().assets
   const audioProfiles = useAudioProfilesStore.getState().audioProfiles
+  const aiProfiles = useAiProfilesStore.getState().aiProfiles
   const attributes = useAttributesStore.getState().getSnapshot()
   const abilities = useAbilitiesStore.getState().getSnapshot()
   const animations = useAnimationsStore.getState().getSnapshot()
@@ -333,6 +324,7 @@ export function getProjectContent(): ProjectContent {
     characterClasses: structuredClone(characterClasses),
     mediaAssets: structuredClone(mediaAssets),
     audioProfiles: structuredClone(audioProfiles),
+    aiProfiles: structuredClone(aiProfiles),
     attributes: structuredClone(attributes),
     abilities: structuredClone(abilities),
     animations: structuredClone(animations),
@@ -353,9 +345,11 @@ export function getProjectContent(): ProjectContent {
       lineageTypeId: meta[character.id]?.lineageTypeId ?? null,
       classId: meta[character.id]?.classId ?? null,
       level: meta[character.id]?.level ?? normalizeCharacterLevel(undefined),
+      progression: meta[character.id]?.progression,
       levelAbilities: meta[character.id]?.levelAbilities ?? [],
       portraitMediaId: meta[character.id]?.portraitMediaId ?? null,
       audioProfileId: meta[character.id]?.audioProfileId ?? null,
+      aiProfileId: meta[character.id]?.aiProfileId ?? null,
       stats: meta[character.id]?.stats ?? normalizeCharacterStats(undefined),
       hitPointSource: meta[character.id]?.hitPointSource ?? 'derived',
       hitPointOverride: meta[character.id]?.hitPointOverride ?? null,
@@ -373,6 +367,7 @@ export function getProjectContent(): ProjectContent {
       spawnLocationRules: meta[character.id]?.spawnLocationRules ?? [],
       despawnLocationRules: meta[character.id]?.despawnLocationRules ?? [],
       renderer: meta[character.id]?.renderer ?? {},
+      castSlotPreview: meta[character.id]?.castSlotPreview,
     })),
     catalogStubs,
     taxonomy: getTaxonomySnapshot(),
@@ -400,6 +395,7 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
   useCharacterClassesStore.getState().replaceAll(content.characterClasses)
   useMediaLibraryStore.getState().replaceAll(content.mediaAssets)
   useAudioProfilesStore.getState().replaceAll(content.audioProfiles)
+  useAiProfilesStore.getState().replaceAll(content.aiProfiles)
   useAttributesStore.getState().replaceAll(content.attributes)
   useAbilitiesStore.getState().replaceAll(content.abilities)
   useAnimationsStore.getState().replaceAll(content.animations)
@@ -427,9 +423,15 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
           lineageTypeId: character.lineageTypeId,
           classId: character.classId,
           level: character.level,
+          progression: normalizeCharacterProgression(
+            character.progression,
+            character.classId,
+            character.level,
+          ),
           levelAbilities: character.levelAbilities,
           portraitMediaId: character.portraitMediaId,
           audioProfileId: character.audioProfileId,
+          aiProfileId: character.aiProfileId ?? null,
           stats: character.stats,
           hitPointSource: character.hitPointSource,
           hitPointOverride: character.hitPointOverride,
@@ -447,6 +449,7 @@ export function applyProjectContent(raw: ProjectContent | undefined): void {
           spawnLocationRules: character.spawnLocationRules ?? [],
           despawnLocationRules: character.despawnLocationRules ?? [],
           renderer: character.renderer ?? {},
+          castSlotPreview: normalizeCharacterCastPreviewState(character.castSlotPreview),
         },
       ]),
     ),

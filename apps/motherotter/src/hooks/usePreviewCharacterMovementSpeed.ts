@@ -53,6 +53,7 @@ export function resolvePreviewMovementSpeedCells(input: {
     meta,
     lineageType,
     characterClass,
+    characterClasses: input.characterClasses,
     attributeDefinitions: input.attributeDefinitions,
     entityValues: input.entityValues,
     levelAttributeGrants: input.levelAttributeGrants,

@@ -175,6 +175,7 @@ export const useAttributesStore = create<AttributesState>()(
 
         if (patch.name !== undefined) definition.name = patch.name
         if (patch.description !== undefined) definition.description = patch.description
+        if (patch.progression !== undefined) definition.progression = patch.progression
 
         const nextInputType = patch.inputType ?? definition.inputType
 

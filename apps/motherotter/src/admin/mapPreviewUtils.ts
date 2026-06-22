@@ -4,7 +4,8 @@ import type { AdminListItem } from './types'
 import { characterHasGroupFlags, characterHasMainFlag, normalizeCharacterCategory } from './characterTypes'
 import { findCharacterGridPlacement } from './mapCharacterPlacementUtils'
 import { isTilePassable } from './mapTileUtils'
-import { getActiveAbilityIds, type LevelAbilityGrant } from './levelGrantTypes'
+import { getActiveAbilityDefinitionIdsForCharacter, type LevelAbilityBindingGrant } from './abilityTypes'
+import { totalCharacterLevel, type CharacterProgression } from './progressionTypes'
 import { resolveProjectMapEntry } from '../lib/projectRepository'
 
 /** Default movement speed in feet (matches derived stat default). */
@@ -22,8 +23,10 @@ export interface PreviewCharacterMeta {
   isMain?: boolean
   isInGroup?: boolean
   portraitMediaId?: string | null
+  lineageTypeId?: string | null
+  classId?: string | null
   level?: number
-  levelAbilities?: LevelAbilityGrant[]
+  progression?: CharacterProgression
   activeLocation?: { mapId: string; x: number; y: number; layer: string } | null
 }
 
@@ -60,6 +63,7 @@ export interface PreviewPartyState {
 export function resolvePreviewParty(
   characters: readonly AdminListItem[],
   metaByCharacterId: Record<string, PreviewCharacterMeta>,
+  levelAbilityGrants: Record<string, LevelAbilityBindingGrant[]>,
 ): PreviewPartyState {
   const members: PreviewPartyMember[] = []
   let mainCharacterId: string | null = null
@@ -73,14 +77,26 @@ export function resolvePreviewParty(
 
     if (isMain) mainCharacterId = character.id
 
+    const progression = meta?.progression
+    const totalLevel = progression ? totalCharacterLevel(progression) : (meta?.level ?? 1)
+    const classTracks =
+      progression?.classes ??
+      (meta?.classId ? [{ classId: meta.classId, level: meta?.level ?? 1, experience: 0 }] : [])
+
     members.push({
       characterId: character.id,
       title: character.title,
       isMain,
       isDummy: false,
       portraitMediaId: meta?.portraitMediaId ?? null,
-      level: meta?.level ?? 1,
-      abilityIds: getActiveAbilityIds(meta?.levelAbilities ?? [], meta?.level ?? 1),
+      level: totalLevel,
+      abilityIds: getActiveAbilityDefinitionIdsForCharacter({
+        characterId: character.id,
+        lineageTypeId: meta?.lineageTypeId ?? null,
+        classes: classTracks.map((track) => ({ classId: track.classId, level: track.level })),
+        totalLevel,
+        levelAbilityGrants,
+      }),
     })
   }
 

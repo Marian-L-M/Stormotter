@@ -17,6 +17,7 @@ import { createEmptyTaxonomyState } from '../admin/taxonomyTypes'
 import type { StateVariable } from '../admin/stateTypes'
 import type { AdminListItem } from '../admin/types'
 import { createDefaultGameplaySettings } from '../admin/gameplaySettingsTypes'
+import { createDefaultAiProfiles } from '../admin/aiProfileTypes'
 import type { ProjectContent, SerializedCatalogStubs, SerializedCharacter } from './projectRecord'
 
 function createStateId(): string {
@@ -92,6 +93,8 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      castSlotGrants: [],
+      assignableAbilityGrants: [],
       renderer: {},
       updatedAt: timestamp,
     },
@@ -112,6 +115,8 @@ function defaultCharacterTypes(): CharacterLineageType[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      castSlotGrants: [],
+      assignableAbilityGrants: [],
       renderer: {},
       updatedAt: timestamp,
     },
@@ -132,6 +137,9 @@ function defaultCharacterClasses(): CharacterClass[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      levelProgression: [],
+      castSlotGrants: [],
+      assignableAbilityGrants: [],
       renderer: {},
       updatedAt: timestamp,
     },
@@ -146,6 +154,9 @@ function defaultCharacterClasses(): CharacterClass[] {
       hiddenInventoryActivatesUnequipped: null,
       derivedStatBases: {},
       derivedStatModifiers: {},
+      levelProgression: [],
+      castSlotGrants: [],
+      assignableAbilityGrants: [],
       renderer: {},
       updatedAt: timestamp,
     },
@@ -166,6 +177,7 @@ function defaultCharacters(): SerializedCharacter[] {
       levelAbilities: [],
       portraitMediaId: null,
       audioProfileId: null,
+      aiProfileId: null,
       stats: createEmptyCharacterStats(),
       hitPointSource: 'derived',
       hitPointOverride: null,
@@ -216,6 +228,7 @@ export function createDefaultProjectContent(): ProjectContent {
     characterClasses: defaultCharacterClasses(),
     mediaAssets: [],
     audioProfiles: [],
+    aiProfiles: createDefaultAiProfiles(),
     attributes: createEmptyAttributesContent(),
     abilities: createEmptyAbilitiesContent(),
     animations: createEmptyAnimationsContent(),

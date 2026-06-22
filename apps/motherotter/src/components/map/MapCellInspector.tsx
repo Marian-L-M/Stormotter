@@ -10,6 +10,7 @@ import { characterSupportsMapLocations, isUniqueNpcCharacter } from '../../admin
 import { formatCellCoordinate } from '../../admin/mapLayerUtils'
 import { useMediaAssetObjectUrl } from '../../hooks/useMediaObjectUrl'
 import { CharacterMapSettingsPanel } from '../admin/CharacterMapSettingsPanel'
+import { EMPTY_ANIMATION_BINDINGS } from '../../admin/animationTypes'
 import { AnimationBindingsEditor } from '../admin/AnimationBindingsEditor'
 import { useCharacterMetaStore } from '../../store/characterMetaStore'
 import { useContainersStore } from '../../store/containersStore'
@@ -42,7 +43,9 @@ export function MapCellInspector({ cell }: MapCellInspectorProps) {
   const mediaAssets = useMediaLibraryStore((state) => state.assets)
 
   const mapEventBindings = useAnimationsStore((state) =>
-    kind === 'event' ? (state.mapEventBindings[entityId] ?? []) : [],
+    kind === 'event'
+      ? (state.mapEventBindings[entityId] ?? EMPTY_ANIMATION_BINDINGS)
+      : EMPTY_ANIMATION_BINDINGS,
   )
   const setMapEventBindings = useAnimationsStore((state) => state.setMapEventBindings)
   const clearSelectedMapCell = useEditorStore((state) => state.clearSelectedMapCell)

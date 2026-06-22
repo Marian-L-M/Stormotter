@@ -44,6 +44,12 @@ import {
   normalizeEntityRendererSettings,
   type EntityRendererSettings,
 } from './entityRendererTypes'
+import {
+  normalizeAssignableAbilityGrants,
+  normalizeLevelCastSlotGrants,
+  type LevelAssignableAbilityEntry,
+  type LevelCastSlotGrant,
+} from './abilityCastSlotTypes'
 
 export interface CharacterLineageType {
   id: string
@@ -62,6 +68,10 @@ export interface CharacterLineageType {
   derivedStatBases: DerivedStatBaseMap
   /** Flat bonuses applied to derived stats for this type */
   derivedStatModifiers: DerivedStatModifierMap
+  /** BG2-style cast slot templates granted per level */
+  castSlotGrants: LevelCastSlotGrant[]
+  /** Abilities players may assign to assignable cast slots */
+  assignableAbilityGrants: LevelAssignableAbilityEntry[]
   /** Per-render-engine map appearance overrides */
   renderer: EntityRendererSettings
   updatedAt: string
@@ -89,6 +99,8 @@ export type LineageTypePatch = Partial<
     | 'derivedStatBases'
     | 'derivedStatModifiers'
     | 'renderer'
+    | 'castSlotGrants'
+    | 'assignableAbilityGrants'
   >
 >
 
@@ -110,6 +122,8 @@ export function normalizeLineageType(
         : null,
     derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
     derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
+    castSlotGrants: normalizeLevelCastSlotGrants(raw.castSlotGrants, raw.id ?? '', 'type'),
+    assignableAbilityGrants: normalizeAssignableAbilityGrants(raw.assignableAbilityGrants),
     renderer: normalizeEntityRendererSettings(raw.renderer, 'T'),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }

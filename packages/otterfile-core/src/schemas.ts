@@ -54,6 +54,7 @@ export const mapSchema = z
       .max(MAX_LAYER_COUNT),
     cells: z.array(mapCellSchema),
     tiles: z.array(mapTileSchema).optional(),
+    restZone: z.enum(['inn', 'inside', 'outside', 'none']).optional(),
   })
   .superRefine((map, ctx) => {
     const uniqueLayers = new Set(map.layers)
@@ -149,10 +150,31 @@ export const manifestSchema = z.object({
   defaultMapId: identifierSchema,
 })
 
+/** Authored story/narrative state — not battle/combat runtime. */
+export const stateVariableSchema = z.object({
+  id: z.string().min(1).max(128),
+  /** Stable engine key (slug); engine logic binds to this, never the title. */
+  key: z.string().min(1).max(128),
+  title: z.string().max(256),
+  scope: z.enum(['global', 'character']),
+  varType: z.enum(['boolean', 'number', 'string']),
+  defaultValue: z.union([z.boolean(), z.number(), z.string()]),
+  /** Set when scope is 'character'; references a character id. */
+  characterId: z.string().min(1).max(128).nullable(),
+  description: z.string().max(2048),
+  updatedAt: z.string(),
+})
+
+/** Authored content carried in `content/*.json`. Each domain is added one slice at a time. */
+export const contentSchema = z.object({
+  stateVariables: z.array(stateVariableSchema).default([]),
+})
+
 export const otterfileDocumentSchema = z
   .object({
     manifest: manifestSchema,
     maps: z.array(mapSchema).min(1),
+    content: contentSchema.default({ stateVariables: [] }),
   })
   .superRefine((doc, ctx) => {
     const mapIds = new Set<string>()
@@ -186,6 +208,10 @@ export function parseManifest(raw: unknown) {
 
 export function parseOtterfileDocument(raw: unknown) {
   return otterfileDocumentSchema.parse(raw)
+}
+
+export function parseStateVariables(raw: unknown) {
+  return z.array(stateVariableSchema).parse(raw)
 }
 
 /** Ensure manifest uses the runtime format version before writing. */

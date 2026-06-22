@@ -1,4 +1,5 @@
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { DefinitionProgressionEditor } from '../../components/admin/DefinitionProgressionEditor'
 import { AnimationBindingsEditor } from '../../components/admin/AnimationBindingsEditor'
 import { MechanicCompositionFields } from '../../components/admin/MechanicCompositionFields'
 import { useAbilitiesStore } from '../../store/abilitiesStore'
@@ -67,6 +68,12 @@ export function AbilityDefinitionEditorView() {
           }
         />
       </label>
+
+      <DefinitionProgressionEditor
+        progression={definition.progression}
+        inputType={definition.inputType}
+        onChange={(progression) => updateDefinition(definition.id, { progression })}
+      />
 
       <AnimationBindingsEditor
         bindings={definition.animationBindings}

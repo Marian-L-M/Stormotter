@@ -4,9 +4,10 @@ import {
   getActiveWorld,
   loadGameFromBytes,
   mapFromWorld,
+  type RestZone,
   type WorldModel,
 } from '@otter/game-state'
-import { FORMAT_VERSION, type OtterfileDocument } from '@otter/otterfile-core'
+import { FORMAT_VERSION, type OtterfileDocument, type StateVariable } from '@otter/otterfile-core'
 import {
   DEFAULT_MEDIA_MAX_FILE_BYTES,
   DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
@@ -77,6 +78,7 @@ export interface EditorMapEntry {
   id: string
   title: string
   backdropMediaId: string | null
+  restZone: RestZone
   world: WorldModel
 }
 
@@ -173,6 +175,11 @@ export function cloneWorld(world: WorldModel): WorldModel {
   }
 }
 
+function normalizeRestZone(value: unknown): RestZone {
+  if (value === 'inn' || value === 'inside' || value === 'outside') return value
+  return 'none'
+}
+
 export function createDefaultMapEntry(
   id = 'main',
   title = 'Main Map',
@@ -181,6 +188,7 @@ export function createDefaultMapEntry(
     id,
     title,
     backdropMediaId: null,
+    restZone: 'none',
     world: createDefaultWorld(),
   }
 }
@@ -190,6 +198,7 @@ function serializeMapEntry(entry: EditorMapEntry): StoredMapEntry {
     id: entry.id,
     title: entry.title,
     backdropMediaId: entry.backdropMediaId,
+    restZone: entry.restZone,
     world: serializeWorld(entry.world),
   }
 }
@@ -199,6 +208,7 @@ function deserializeMapEntry(entry: StoredMapEntry): EditorMapEntry {
     id: entry.id,
     title: entry.title,
     backdropMediaId: entry.backdropMediaId,
+    restZone: normalizeRestZone(entry.restZone),
     world: deserializeWorld(entry.world),
   }
 }
@@ -212,6 +222,7 @@ function normalizeStoredMaps(project: StoredProject): StoredMapEntry[] {
       id: project.mapId,
       title: project.mapId === 'main' ? 'Main Map' : project.mapId,
       backdropMediaId: project.mapBackdropMediaId ?? null,
+      restZone: 'none',
       world: project.world,
     },
   ]
@@ -338,7 +349,10 @@ export function createDefaultSnapshot(projectId = createProjectId()): EditorSnap
   }
 }
 
-export function snapshotToDocument(snapshot: EditorSnapshot): OtterfileDocument {
+export function snapshotToDocument(
+  snapshot: EditorSnapshot,
+  stateVariables: readonly StateVariable[] = [],
+): OtterfileDocument {
   const maps = snapshotMapsForPersistence(snapshot)
   return {
     manifest: {
@@ -347,7 +361,11 @@ export function snapshotToDocument(snapshot: EditorSnapshot): OtterfileDocument 
       title: snapshot.title,
       defaultMapId: snapshot.mapId,
     },
-    maps: maps.map((entry) => mapFromWorld(entry.id, entry.world)),
+    maps: maps.map((entry) => ({
+      ...mapFromWorld(entry.id, entry.world),
+      ...(entry.restZone !== 'none' ? { restZone: entry.restZone } : {}),
+    })),
+    content: { stateVariables: [...stateVariables] },
   }
 }
 
@@ -452,31 +470,41 @@ export async function removeStoredProject(projectId: string): Promise<void> {
   await deleteStoredProject(projectId)
 }
 
-export async function contentFromBytes(bytes: Uint8Array): Promise<EditorContent> {
+/** Authored content carried by an otterfile, separated from editor UI state. */
+export interface ImportedOtterfile {
+  editor: EditorContent
+  stateVariables: StateVariable[]
+}
+
+export async function contentFromBytes(bytes: Uint8Array): Promise<ImportedOtterfile> {
   const loaded = await loadGameFromBytes(bytes)
   const world = getActiveWorld(loaded)
   const maps: EditorMapEntry[] = [...loaded.maps.entries()].map(([id, mapWorld]) => ({
     id,
     title: id === 'main' ? 'Main Map' : id,
     backdropMediaId: null,
+    restZone: loaded.mapRestZones.get(id) ?? 'none',
     world: cloneWorld(mapWorld),
   }))
 
   return {
-    gameId: loaded.gameId,
-    title: loaded.title,
-    mapId: loaded.defaultMapId,
-    activeLayer: world.layers[0] ?? 'ground',
-    mapToolKind: DEFAULT_MAP_TOOL_KIND,
-    mapPlacementEntityId: null,
-    activeMode: 'maps',
-    mapBackdropMediaId: null,
-    mapRenderEngine: DEFAULT_MAP_RENDER_ENGINE,
-    enabledMapRenderEngines: [DEFAULT_MAP_RENDER_ENGINE],
-    mediaMaxFileBytes: DEFAULT_MEDIA_MAX_FILE_BYTES,
-    mediaProjectSoftBudgetBytes: DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
-    world: cloneWorld(world),
-    maps: maps.length > 0 ? maps : [createDefaultMapEntry(loaded.defaultMapId, 'Main Map')],
+    editor: {
+      gameId: loaded.gameId,
+      title: loaded.title,
+      mapId: loaded.defaultMapId,
+      activeLayer: world.layers[0] ?? 'ground',
+      mapToolKind: DEFAULT_MAP_TOOL_KIND,
+      mapPlacementEntityId: null,
+      activeMode: 'maps',
+      mapBackdropMediaId: null,
+      mapRenderEngine: DEFAULT_MAP_RENDER_ENGINE,
+      enabledMapRenderEngines: [DEFAULT_MAP_RENDER_ENGINE],
+      mediaMaxFileBytes: DEFAULT_MEDIA_MAX_FILE_BYTES,
+      mediaProjectSoftBudgetBytes: DEFAULT_MEDIA_PROJECT_SOFT_BUDGET_BYTES,
+      world: cloneWorld(world),
+      maps: maps.length > 0 ? maps : [createDefaultMapEntry(loaded.defaultMapId, 'Main Map')],
+    },
+    stateVariables: [...loaded.stateVariables],
   }
 }
 
@@ -484,12 +512,13 @@ export async function importBytesAsNewProject(bytes: Uint8Array): Promise<{
   snapshot: EditorSnapshot
   content: ProjectContent
 }> {
-  const contentFromFile = await contentFromBytes(bytes)
+  const { editor, stateVariables } = await contentFromBytes(bytes)
   const snapshot: EditorSnapshot = {
     projectId: createProjectId(),
-    ...contentFromFile,
+    ...editor,
   }
   const content = createDefaultProjectContent()
+  content.stateVariables = stateVariables
 
   const timestamp = nowIso()
   await putProject(

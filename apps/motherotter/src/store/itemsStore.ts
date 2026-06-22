@@ -78,6 +78,10 @@ export const useItemsStore = create<ItemsState>()(
         }
         if (patch.droppable !== undefined) item.droppable = patch.droppable
         if (patch.stealable !== undefined) item.stealable = patch.stealable
+        if (patch.animationBindings !== undefined) item.animationBindings = patch.animationBindings
+        if (patch.castSlots !== undefined) item.castSlots = patch.castSlots
+        if (patch.maxItemCharges !== undefined) item.maxItemCharges = patch.maxItemCharges
+        if (patch.consumable !== undefined) item.consumable = patch.consumable
 
         item.updatedAt = new Date().toISOString()
       })

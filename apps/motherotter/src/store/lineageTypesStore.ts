@@ -26,6 +26,8 @@ function seedLineageType(name: string, description: string): CharacterLineageTyp
     hiddenInventoryActivatesUnequipped: null,
     derivedStatBases: {},
     derivedStatModifiers: {},
+    castSlotGrants: [],
+    assignableAbilityGrants: [],
     renderer: {},
     updatedAt: timestamp,
   }
@@ -63,7 +65,16 @@ export const useLineageTypesStore = create<LineageTypesState>()(
         if (patch.statRanges !== undefined) lineageType.statRanges = patch.statRanges
         if (patch.hitPointBonusDice !== undefined) lineageType.hitPointBonusDice = patch.hitPointBonusDice
         if (patch.levelAbilities !== undefined) lineageType.levelAbilities = patch.levelAbilities
+        if (patch.castSlotGrants !== undefined) lineageType.castSlotGrants = patch.castSlotGrants
+        if (patch.assignableAbilityGrants !== undefined) {
+          lineageType.assignableAbilityGrants = patch.assignableAbilityGrants
+        }
         if (patch.slotRules !== undefined) lineageType.slotRules = patch.slotRules
+        if (patch.derivedStatBases !== undefined) lineageType.derivedStatBases = patch.derivedStatBases
+        if (patch.derivedStatModifiers !== undefined) {
+          lineageType.derivedStatModifiers = patch.derivedStatModifiers
+        }
+        if (patch.renderer !== undefined) lineageType.renderer = patch.renderer
         if (patch.hiddenInventoryActivatesUnequipped !== undefined) {
           lineageType.hiddenInventoryActivatesUnequipped = patch.hiddenInventoryActivatesUnequipped
         }

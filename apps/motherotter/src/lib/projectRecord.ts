@@ -8,6 +8,7 @@ import type { AbilitiesContent } from '../admin/abilityTypes'
 import type { AnimationsContent } from '../admin/animationTypes'
 import type { AttributesContent } from '../admin/attributeTypes'
 import type { AudioProfile } from '../admin/audioProfileTypes'
+import type { AiProfile } from '../admin/aiProfileTypes'
 import type { CharacterCategory } from '../admin/characterTypes'
 import type { MediaAsset } from '../admin/mediaTypes'
 import type { CharacterClass } from '../admin/characterClassTypes'
@@ -20,9 +21,11 @@ import type { TaxonomyState } from '../admin/taxonomyTypes'
 import type { AdminListItem } from '../admin/types'
 import type { ItemSlotPlacementSettings } from '../admin/slotRules'
 import type { SlotRulesMap } from '../admin/slotRules'
-import type { EntranceTarget, SpawnPointConfig } from '@otter/game-state'
+import type { EntranceTarget, RestZone, SpawnPointConfig } from '@otter/game-state'
 import type { CharacterLocationRule, MapCellReference } from '../admin/characterLocationTypes'
 import type { DerivedStatBaseMap, DerivedStatModifierMap } from '../admin/derivedStatTypes'
+import type { CharacterProgression } from '../admin/progressionTypes'
+import type { CharacterCastPreviewState } from '../admin/abilityCastSlotTypes'
 import type { EditorMode } from '../editorModes'
 import type { DeOttererIcon } from '../admin/deOttererIconTypes'
 import type { EntityRendererSettings } from '../admin/entityRendererTypes'
@@ -38,9 +41,11 @@ export interface SerializedCharacter {
   lineageTypeId: string | null
   classId: string | null
   level: number
+  progression?: CharacterProgression
   levelAbilities: LevelAbilityGrant[]
   portraitMediaId: string | null
   audioProfileId: string | null
+  aiProfileId: string | null
   stats: CharacterStatValues
   hitPointSource: HitPointSource
   hitPointOverride: number | null
@@ -58,6 +63,7 @@ export interface SerializedCharacter {
   spawnLocationRules?: CharacterLocationRule[]
   despawnLocationRules?: CharacterLocationRule[]
   renderer?: EntityRendererSettings
+  castSlotPreview?: CharacterCastPreviewState
 }
 
 export interface SerializedCatalogStubs {
@@ -74,6 +80,7 @@ export interface ProjectContent {
   characterClasses: CharacterClass[]
   mediaAssets: MediaAsset[]
   audioProfiles: AudioProfile[]
+  aiProfiles: AiProfile[]
   attributes: AttributesContent
   abilities: AbilitiesContent
   animations: AnimationsContent
@@ -125,6 +132,7 @@ export interface StoredMapEntry {
   id: string
   title: string
   backdropMediaId: string | null
+  restZone?: RestZone
   world: SerializedWorld
 }
 

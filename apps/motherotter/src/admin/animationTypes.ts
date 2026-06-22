@@ -90,6 +90,9 @@ export interface AnimationBinding {
   order: number
 }
 
+/** Stable empty array for Zustand selectors — inline `[]` fallbacks cause infinite re-renders. */
+export const EMPTY_ANIMATION_BINDINGS: AnimationBinding[] = []
+
 export interface AnimationsContent {
   definitions: AnimationDefinition[]
   mapEventBindings: Record<string, AnimationBinding[]>

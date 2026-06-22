@@ -4,6 +4,7 @@ import { OtterfileError } from '@otter/otterfile-core'
 import { toWorldView } from '@otter/renderer-api'
 import { createDemoRenderer } from '@otter/renderer-demo'
 import type { Renderer } from '@otter/renderer-api'
+import { CastSlotPlayPanel } from './CastSlotPlayPanel'
 
 export function App() {
   const hostRef = useRef<HTMLDivElement>(null)
@@ -113,10 +114,28 @@ export function App() {
               ))}
             </div>
           ) : null}
+
+          {game.stateVariables.length > 0 ? (
+            <div className="state-variables">
+              <h3>State variables ({game.stateVariables.length})</h3>
+              <ul>
+                {game.stateVariables.map((variable) => (
+                  <li key={variable.id}>
+                    <code>{variable.key}</code> · {variable.scope} · {variable.varType} ={' '}
+                    {String(variable.defaultValue)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </section>
       ) : (
         <p className="hint">No game loaded yet. Export an otterfile from Motherotter when ready.</p>
       )}
+
+      {game?.cartridge ? (
+        <CastSlotPlayPanel game={game} cartridge={game.cartridge} />
+      ) : null}
 
       <div ref={hostRef} className="renderer-host" />
     </main>

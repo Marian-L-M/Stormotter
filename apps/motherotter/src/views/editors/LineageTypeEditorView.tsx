@@ -18,10 +18,12 @@ import { useTaxonomyStore } from '../../store/taxonomyStore'
 import { useEditorStore } from '../../store/editorStore'
 import { DerivedStatBaseEditor } from '../../components/admin/DerivedStatBaseEditor'
 import { DerivedStatModifierEditor } from '../../components/admin/DerivedStatModifierEditor'
+import { EntityCastSlotsEditorPanel } from '../../components/admin/EntityCastSlotsEditorPanel'
 import { SlotRulesEditor, HiddenInventoryToggleField } from '../../components/admin/SlotRulesEditor'
 
 const LINEAGE_TYPE_EDITOR_TABS = [
   { id: 'details', label: 'Details' },
+  { id: 'cast-slots', label: 'Cast slots' },
   { id: 'renderer', label: 'Renderer' },
 ] as const
 
@@ -82,6 +84,21 @@ export function LineageTypeEditorView() {
           defaultGlyph="T"
           entityLabel="character type"
           onChange={(renderer) => updateLineageType(type.id, { renderer })}
+        />
+      )
+    }
+
+    if (activeTab === 'cast-slots') {
+      return (
+        <EntityCastSlotsEditorPanel
+          entityId={type.id}
+          entityKind="type"
+          castSlotGrants={type.castSlotGrants}
+          assignableAbilityGrants={type.assignableAbilityGrants}
+          onCastSlotGrantsChange={(castSlotGrants) => updateLineageType(type.id, { castSlotGrants })}
+          onAssignableAbilityGrantsChange={(assignableAbilityGrants) =>
+            updateLineageType(type.id, { assignableAbilityGrants })
+          }
         />
       )
     }

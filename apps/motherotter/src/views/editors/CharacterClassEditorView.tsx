@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { AdminEditorShell } from '../../components/admin/AdminEditorShell'
+import { EntityCastSlotsEditorPanel } from '../../components/admin/EntityCastSlotsEditorPanel'
+import { ClassLevelProgressionEditor } from '../../components/admin/ClassLevelProgressionEditor'
 import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
 import { DiceRollInput } from '../../components/admin/DiceRollInput'
 import { EntityLevelAbilityFields } from '../../components/admin/EntityLevelAbilityFields'
@@ -18,6 +20,8 @@ import { SlotRulesEditor, HiddenInventoryToggleField } from '../../components/ad
 
 const CHARACTER_CLASS_EDITOR_TABS = [
   { id: 'details', label: 'Details' },
+  { id: 'progression', label: 'Progression' },
+  { id: 'cast-slots', label: 'Cast slots' },
   { id: 'renderer', label: 'Renderer' },
 ] as const
 
@@ -67,6 +71,38 @@ export function CharacterClassEditorView() {
           defaultGlyph="C"
           entityLabel="character class"
           onChange={(renderer) => updateCharacterClass(cls.id, { renderer })}
+        />
+      )
+    }
+
+    if (activeTab === 'progression') {
+      return (
+        <>
+          <p className="admin-editor-lead">
+            Per-level cumulative XP thresholds and point grants for this class. Auto-grants at each
+            level can be configured alongside the legacy level ability/attribute fields on Details.
+          </p>
+          <ClassLevelProgressionEditor
+            value={cls.levelProgression}
+            onChange={(levelProgression) => updateCharacterClass(cls.id, { levelProgression })}
+          />
+        </>
+      )
+    }
+
+    if (activeTab === 'cast-slots') {
+      return (
+        <EntityCastSlotsEditorPanel
+          entityId={cls.id}
+          entityKind="class"
+          castSlotGrants={cls.castSlotGrants}
+          assignableAbilityGrants={cls.assignableAbilityGrants}
+          onCastSlotGrantsChange={(castSlotGrants) =>
+            updateCharacterClass(cls.id, { castSlotGrants })
+          }
+          onAssignableAbilityGrantsChange={(assignableAbilityGrants) =>
+            updateCharacterClass(cls.id, { assignableAbilityGrants })
+          }
         />
       )
     }

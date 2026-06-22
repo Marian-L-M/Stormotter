@@ -24,6 +24,7 @@ import { useQuestsStore } from '../../store/questsStore'
 import { useAnimationsStore } from '../../store/animationsStore'
 import { AnimationBindingsEditor } from './AnimationBindingsEditor'
 import { StorylineFlowListEditor } from './StorylineFlowListEditor'
+import { EMPTY_ANIMATION_BINDINGS } from '../../admin/animationTypes'
 
 interface StorylineFlowVisualEditorProps {
   graph: StorylineFlowGraph
@@ -545,7 +546,11 @@ export function StorylineFlowVisualEditor({ graph, onChange }: StorylineFlowVisu
 }
 
 function HookAnimationBindingsPanel({ hookId }: { hookId: string }) {
-  const bindings = useAnimationsStore((state) => (hookId ? (state.hookBindings[hookId] ?? []) : []))
+  const bindings = useAnimationsStore((state) =>
+    hookId
+      ? (state.hookBindings[hookId] ?? EMPTY_ANIMATION_BINDINGS)
+      : EMPTY_ANIMATION_BINDINGS,
+  )
   const setHookBindings = useAnimationsStore((state) => state.setHookBindings)
 
   if (!hookId) {

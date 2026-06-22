@@ -7,6 +7,10 @@ import {
 } from '../../admin/entityListActions'
 import { formatDiceRoll } from '../../admin/diceTypes'
 import { summarizeLevelAbilityBindingGrants } from '../../admin/abilityTypes'
+import {
+  summarizeAssignableAbilityGrants,
+  summarizeCastSlotGrants,
+} from '../../admin/abilityCastSlotTypes'
 import type { AdminColumn } from '../../admin/types'
 import { AdminListShell } from '../../components/admin/AdminListShell'
 import { AdminListTable, useAdminListTable } from '../../components/admin/AdminListTable'
@@ -47,6 +51,12 @@ export function CharacterClassesListView() {
       textColumn('tags', 'Tags', (item) => getTaxonomySummaryForEntity('character-classes', item.id).tags),
       textColumn('abilities', 'Abilities', (item) =>
         summarizeLevelAbilityBindingGrants(levelAbilityGrants[item.id] ?? []),
+      ),
+      textColumn('castSlots', 'Cast slots', (item) =>
+        summarizeCastSlotGrants(item.characterClass.castSlotGrants),
+      ),
+      textColumn('assignablePool', 'Assignable pool', (item) =>
+        summarizeAssignableAbilityGrants(item.characterClass.assignableAbilityGrants),
       ),
       textColumn('updated', 'Modified', (item) => formatTimestamp(item.updatedAt), {
         getFilterValue: (item) => item.updatedAt,

@@ -15,6 +15,16 @@ import {
   type DerivedStatModifierMap,
 } from './derivedStatTypes'
 import {
+  normalizeClassLevelProgression,
+  type ClassLevelProgressionEntry,
+} from './progressionTypes'
+import {
+  normalizeAssignableAbilityGrants,
+  normalizeLevelCastSlotGrants,
+  type LevelAssignableAbilityEntry,
+  type LevelCastSlotGrant,
+} from './abilityCastSlotTypes'
+import {
   normalizeEntityRendererSettings,
   type EntityRendererSettings,
 } from './entityRendererTypes'
@@ -37,6 +47,12 @@ export interface CharacterClass {
   derivedStatBases: DerivedStatBaseMap
   /** Flat bonuses applied to derived stats for this class */
   derivedStatModifiers: DerivedStatModifierMap
+  /** Per-level XP thresholds, point grants, and auto unlocks */
+  levelProgression: ClassLevelProgressionEntry[]
+  /** BG2-style cast slot templates granted per level */
+  castSlotGrants: LevelCastSlotGrant[]
+  /** Abilities players may assign to assignable cast slots */
+  assignableAbilityGrants: LevelAssignableAbilityEntry[]
   /** Per-render-engine map appearance overrides */
   renderer: EntityRendererSettings
   updatedAt: string
@@ -64,6 +80,9 @@ export type CharacterClassPatch = Partial<
     | 'derivedStatBases'
     | 'derivedStatModifiers'
     | 'renderer'
+    | 'levelProgression'
+    | 'castSlotGrants'
+    | 'assignableAbilityGrants'
   >
 >
 
@@ -86,6 +105,9 @@ export function normalizeCharacterClass(
     derivedStatBases: normalizeDerivedStatBaseMap(raw.derivedStatBases),
     derivedStatModifiers: normalizeDerivedStatModifierMap(raw.derivedStatModifiers),
     renderer: normalizeEntityRendererSettings(raw.renderer, 'C'),
+    levelProgression: normalizeClassLevelProgression(raw.levelProgression),
+    castSlotGrants: normalizeLevelCastSlotGrants(raw.castSlotGrants, raw.id ?? '', 'class'),
+    assignableAbilityGrants: normalizeAssignableAbilityGrants(raw.assignableAbilityGrants),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   }
 }

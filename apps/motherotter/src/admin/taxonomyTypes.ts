@@ -9,6 +9,7 @@ export type TaxonomyDomain =
   | 'character-classes'
   | 'media'
   | 'audio-profiles'
+  | 'ai-profiles'
   | 'items'
   | 'containers'
   | 'abilities'
@@ -46,6 +47,7 @@ export const TAXONOMY_DOMAINS: TaxonomyDomain[] = [
   'character-classes',
   'media',
   'audio-profiles',
+  'ai-profiles',
   'items',
   'containers',
   'abilities',
@@ -128,7 +130,16 @@ export function normalizeTaxonomyState(raw: TaxonomyState | undefined): Taxonomy
 export function editorModeToTaxonomyDomain(mode: string): TaxonomyDomain | null {
   if (mode === 'state') return 'state'
   if (mode === 'races' || mode === 'classes') return 'character-types'
-  if (mode === 'character-types' || mode === 'character-classes' || mode === 'media' || mode === 'audio-profiles') return mode
+  if (
+    mode === 'character-types' ||
+    mode === 'character-classes' ||
+    mode === 'media' ||
+    mode === 'audio-profiles' ||
+    mode === 'ai-profiles'
+  ) {
+    return mode
+  }
+  if (mode === 'ai') return 'ai-profiles'
   if (TAXONOMY_DOMAINS.includes(mode as TaxonomyDomain)) {
     return mode as TaxonomyDomain
   }

@@ -4,6 +4,8 @@ import {
   type CharacterCategory,
 } from '../admin/characterTypes'
 import { AdminSectionNav } from '../components/admin/AdminSectionNav'
+import { CharacterInitializerPanel } from '../components/admin/CharacterInitializerPanel'
+import { FightPreviewPanel } from '../components/admin/FightPreviewPanel'
 import { CharacterEditorView } from './editors/CharacterEditorView'
 import { CharactersListView } from './lists/CharactersListView'
 import { useEditorStore } from '../store/editorStore'
@@ -33,6 +35,10 @@ export function CharactersTabView() {
 
   return (
     <div className="characters-tab">
+      <div className="admin-preview-tools">
+        <CharacterInitializerPanel />
+        <FightPreviewPanel />
+      </div>
       <AdminSectionNav
         sections={SECTIONS}
         active={characterTypeTab}

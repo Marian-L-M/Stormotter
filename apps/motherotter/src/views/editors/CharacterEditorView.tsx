@@ -18,6 +18,7 @@ import {
 import { countFilledProfileTriggers } from '../../admin/audioProfileTypes'
 import { CharacterAttributeFields } from '../../components/admin/CharacterAttributeFields'
 import { CharacterDerivedStatsPanel } from '../../components/admin/CharacterDerivedStatsPanel'
+import { CharacterProgressionPanel } from '../../components/admin/CharacterProgressionPanel'
 import { CharacterHitPointsFields } from '../../components/admin/CharacterHitPointsFields'
 import { CharacterLevelAbilityFields } from '../../components/admin/CharacterLevelAbilityFields'
 import { resolveCharacterSlotEnabled } from '../../admin/slotRules'
@@ -32,7 +33,9 @@ import { AdminSectionNav } from '../../components/admin/AdminSectionNav'
 import { TaxonomyEditorFields } from '../../components/admin/TaxonomyEditorFields'
 import { useAbilitiesStore } from '../../store/abilitiesStore'
 import { useAttributesStore } from '../../store/attributesStore'
+import { useAiProfilesStore } from '../../store/aiProfilesStore'
 import { useAudioProfilesStore } from '../../store/audioProfilesStore'
+import { summarizeAiProfile } from '../../admin/aiProfileTypes'
 import { useCharacterClassesStore } from '../../store/characterClassesStore'
 import { useCharacterMetaStore, DEFAULT_META } from '../../store/characterMetaStore'
 import { useContainersStore } from '../../store/containersStore'
@@ -91,6 +94,7 @@ export function CharacterEditorView({
   const lineageTypes = useLineageTypesStore((state) => state.lineageTypes)
   const characterClasses = useCharacterClassesStore((state) => state.characterClasses)
   const audioProfiles = useAudioProfilesStore((state) => state.audioProfiles)
+  const aiProfiles = useAiProfilesStore((state) => state.aiProfiles)
 
   if (!entityId || !item) {
     return (
@@ -110,6 +114,9 @@ export function CharacterEditorView({
     : undefined
   const linkedAudioProfile = meta.audioProfileId
     ? audioProfiles.find((entry) => entry.id === meta.audioProfileId)
+    : undefined
+  const linkedAiProfile = meta.aiProfileId
+    ? aiProfiles.find((entry) => entry.id === meta.aiProfileId)
     : undefined
   const linkedCharacterClass = meta.classId
     ? characterClasses.find((entry) => entry.id === meta.classId)
@@ -301,6 +308,31 @@ export function CharacterEditorView({
             </label>
 
             <label className="field">
+              <span>AI profile</span>
+              <select
+                className="admin-select admin-select-block"
+                value={meta.aiProfileId ?? ''}
+                onChange={(event) =>
+                  updateMeta(character.id, { aiProfileId: event.target.value || null })
+                }
+              >
+                <option value="">Unassigned</option>
+                {aiProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+              <span className="field-hint">
+                Battle behavior preset for combat and fight preview. Create profiles under Mechanics
+                → AI.
+              </span>
+              {linkedAiProfile ? (
+                <span className="field-hint">{summarizeAiProfile(linkedAiProfile)}</span>
+              ) : null}
+            </label>
+
+            <label className="field">
               <span>Summary</span>
               <textarea
                 className="admin-textarea"
@@ -365,9 +397,14 @@ export function CharacterEditorView({
         return (
           <>
             <p className="admin-editor-lead">
-              Character level and hit points. Derived values use the linked class hit die and type
-              bonus dice unless overridden.
+              Multi-class progression, XP tracks, and hit points. Total level is the sum of class
+              levels. Points grant immediately on level-up.
             </p>
+            <CharacterProgressionPanel
+              characterId={character.id}
+              meta={meta}
+              characterClasses={characterClasses}
+            />
             <CharacterHitPointsFields
               meta={meta}
               linkedClass={linkedCharacterClass}
